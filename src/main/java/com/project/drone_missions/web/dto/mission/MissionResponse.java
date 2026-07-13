@@ -9,6 +9,7 @@ public record MissionResponse(
         String name,
         String description,
         MissionStatus status,
+        Long userId,
         Instant startTime,
         Instant endTime,
         Instant createdAt,

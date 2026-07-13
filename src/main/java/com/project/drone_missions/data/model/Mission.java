@@ -35,6 +35,10 @@ public class Mission {
     @Column(nullable = false)
     private MissionStatus status;
 
+    // Id of the user who created and owns this mission. Nullable for legacy
+    // missions created before authentication existed; always set for new ones.
+    private Long userId;
+
     private Instant startTime;
 
     private Instant endTime;
