@@ -1,6 +1,9 @@
 package com.project.drone_missions.web;
 
+import com.project.drone_missions.business.ConflictException;
+import com.project.drone_missions.business.ForbiddenException;
 import com.project.drone_missions.business.NotFoundException;
+import com.project.drone_missions.business.UnauthorizedException;
 import lombok.Builder;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -49,6 +52,36 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(ErrorResponse.<Void>builder()
                         .status(HttpStatus.NOT_FOUND)
+                        .message(exception.getMessage())
+                        .build());
+    }
+
+    /** Invalid login credentials surfaced from the business layer -> 401. */
+    @ExceptionHandler(UnauthorizedException.class)
+    public ResponseEntity<ErrorResponse<Void>> handleUnauthorized(UnauthorizedException exception) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(ErrorResponse.<Void>builder()
+                        .status(HttpStatus.UNAUTHORIZED)
+                        .message(exception.getMessage())
+                        .build());
+    }
+
+    /** Authenticated but not permitted (e.g. editing someone else's mission) -> 403. */
+    @ExceptionHandler(ForbiddenException.class)
+    public ResponseEntity<ErrorResponse<Void>> handleForbidden(ForbiddenException exception) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(ErrorResponse.<Void>builder()
+                        .status(HttpStatus.FORBIDDEN)
+                        .message(exception.getMessage())
+                        .build());
+    }
+
+    /** Conflict with existing state (e.g. duplicate email) -> 409. */
+    @ExceptionHandler(ConflictException.class)
+    public ResponseEntity<ErrorResponse<Void>> handleConflict(ConflictException exception) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ErrorResponse.<Void>builder()
+                        .status(HttpStatus.CONFLICT)
                         .message(exception.getMessage())
                         .build());
     }
