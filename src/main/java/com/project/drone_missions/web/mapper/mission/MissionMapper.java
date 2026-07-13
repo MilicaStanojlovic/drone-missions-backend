@@ -24,6 +24,7 @@ public class MissionMapper {
                 mission.getName(),
                 mission.getDescription(),
                 mission.getStatus(),
+                mission.getUserId(),
                 mission.getStartTime(),
                 mission.getEndTime(),
                 mission.getCreatedAt(),
