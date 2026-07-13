@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-Spring Boot 4.1 backend for managing drone missions. Java 25 LTS, Maven (via wrapper), PostgreSQL with Spring Data JPA. Implements Mission CRUD at `/api/v1/missions`, organized in a layered, by-feature package structure (see Conventions).
+Spring Boot 4.1 backend for managing drone missions. Java 25 LTS, Maven (via wrapper), PostgreSQL with Spring Data JPA. Implements Mission CRUD at `/api/v1/missions` and stateless JWT authentication / account management at `/api/v1/auth`, organized in a layered, by-feature package structure (see Conventions).
 
 ## JDK requirement (important)
 
@@ -45,7 +45,7 @@ Two layers, each organized by feature (`*.mission`, and `*.user`, etc. as domain
 
 - **Presentation — `web`**: controllers and mappers, per feature (`web.mission.MissionController`, `web.mission.MissionMapper`). Cross-cutting web infrastructure (e.g. `GlobalExceptionHandler`) lives at the `web` root.
 - **Business — `business`**: services and custom exceptions, per feature (`business.mission.MissionService`, `business.mission.MissionNotFoundException`). Shared bases (e.g. the abstract `NotFoundException`) live at the `business` root.
-- Supporting packages stay shared: `dto` (request/response records), `model` (JPA entities), `repository`, `config`.
+- Supporting packages stay shared: `data.model` (JPA entities), `data.repository`, `config`, and `security` (JWT/authentication infrastructure). Request/response records live under `web.dto.<feature>`.
 
 ### Strict separation of concerns
 
@@ -60,5 +60,12 @@ Two layers, each organized by feature (`*.mission`, and `*.user`, etc. as domain
 ### Exception handling
 
 - A single `@RestControllerAdvice` **`GlobalExceptionHandler`** (in `web`). Every response is built from an immutable **`ErrorResponse` record** via its Lombok **`@Builder`**.
-- Handlers, most-specific first: `MethodArgumentNotValidException` → 400 (per-field errors); `HttpMessageNotReadableException` → 400 (malformed body / unknown enum, so client errors never surface as 500); `NotFoundException` (base) → 404; **catch-all `Exception`** → 500 generic.
-- **Custom exceptions are domain-specific and self-documenting.** `NotFoundException` is an abstract base; each domain extends it (`MissionNotFoundException`, and `UserNotFoundException` once a user domain exists). The exception *type* conveys the error context — no need to read the message. Don't throw the base directly.
+- Handlers, most-specific first: `MethodArgumentNotValidException` → 400 (per-field errors); `HttpMessageNotReadableException` → 400 (malformed body / unknown enum, so client errors never surface as 500); `NotFoundException` → 404; `UnauthorizedException` → 401; `ForbiddenException` → 403; `ConflictException` → 409; **catch-all `Exception`** → 500 generic.
+- **Custom exceptions are domain-specific and self-documenting.** Each HTTP error class has an abstract base at the `business` root — `NotFoundException` (404), `UnauthorizedException` (401), `ForbiddenException` (403), `ConflictException` (409) — and every domain extends the right one (e.g. `MissionNotFoundException`, `UserNotFoundException`, `InvalidCredentialsException`, `MissionAccessDeniedException`, `EmailAlreadyExistsException`). The exception *type* conveys the error context — no need to read the message. Don't throw a base directly.
+
+### Security & authentication
+
+- **Stateless JWT.** All `/api/v1/**` endpoints require a valid `Authorization: Bearer <token>` **except** `POST /api/v1/auth/register` and `POST /api/v1/auth/login`. Rules live in `config.SecurityConfig`; the `security.JwtAuthenticationFilter` authenticates each request and stores the **user id (`Long`) as the authentication principal**.
+- **Get the current user id** in a controller with the custom `@CurrentUserId Long userId` param (a meta-annotation over Spring's `@AuthenticationPrincipal`). Never trust a user id from the request body.
+- **Passwords** are BCrypt-hashed (`PasswordEncoder` bean) and never returned — `UserResponse` excludes the hash. Token issuance/validation is in `security.JwtTokenProvider`; the HS256 secret and expiry come from `security.jwt.*` in `application.properties` (override via `SECURITY_JWT_SECRET` / `SECURITY_JWT_EXPIRATION_MS` in prod).
+- **Missing/invalid token** → 401 via `security.RestAuthenticationEntryPoint` (JSON body matching `ErrorResponse`). **Ownership** is enforced in `MissionService` (only a mission's creator may edit/delete it → `MissionAccessDeniedException` → 403).
