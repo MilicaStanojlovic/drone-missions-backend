@@ -1,6 +1,6 @@
-package com.project.drone_missions.dto;
+package com.project.drone_missions.web.dto.mission;
 
-import com.project.drone_missions.model.MissionStatus;
+import com.project.drone_missions.data.model.MissionStatus;
 
 import java.time.Instant;
 

@@ -1,4 +1,4 @@
-package com.project.drone_missions.model;
+package com.project.drone_missions.data.model;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -32,6 +32,7 @@ public class Mission {
     private String description;
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private MissionStatus status;
 
     private Instant startTime;

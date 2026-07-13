@@ -1,8 +1,8 @@
-package com.project.drone_missions.mapper;
+package com.project.drone_missions.web.mapper.mission;
 
-import com.project.drone_missions.dto.MissionRequest;
-import com.project.drone_missions.dto.MissionResponse;
-import com.project.drone_missions.model.Mission;
+import com.project.drone_missions.web.dto.mission.MissionRequest;
+import com.project.drone_missions.web.dto.mission.MissionResponse;
+import com.project.drone_missions.data.model.Mission;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -10,16 +10,12 @@ public class MissionMapper {
 
     public Mission toEntity(MissionRequest request) {
         Mission mission = new Mission();
-        apply(request, mission);
-        return mission;
-    }
-
-    public void apply(MissionRequest request, Mission mission) {
         mission.setName(request.name());
         mission.setDescription(request.description());
         mission.setStatus(request.status());
         mission.setStartTime(request.startTime());
         mission.setEndTime(request.endTime());
+        return mission;
     }
 
     public MissionResponse toResponse(Mission mission) {
