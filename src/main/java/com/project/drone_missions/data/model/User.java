@@ -2,6 +2,8 @@ package com.project.drone_missions.data.model;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -36,6 +38,11 @@ public class User {
     // Stores the BCrypt hash, never the raw password.
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;
+
+    // Which side of the marketplace this account is on. Set at registration, never changed.
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 32)
+    private UserRole role;
 
     @CreationTimestamp
     @Column(updatable = false)
