@@ -9,9 +9,9 @@ import java.lang.annotation.Target;
 
 /**
  * Injects the authenticated user's id into a controller method parameter.
- * Meta-annotated with {@link AuthenticationPrincipal}: the JWT filter stores the
- * user id as the authentication principal, so {@code @CurrentUserId Long userId}
- * resolves to it. On an unauthenticated request the value is null — but the
+ * Meta-annotated with {@link AuthenticationPrincipal}: the resource server stores the user
+ * id (a {@code Long}, from the token's subject) as the principal, so {@code @CurrentUserId
+ * Long userId} resolves to it. On an unauthenticated request the value is null — but the
  * security rules reject those before the controller runs.
  */
 @Target(ElementType.PARAMETER)
