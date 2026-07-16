@@ -45,6 +45,7 @@ public class MissionController {
     }
 
     @GetMapping
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<MissionResponse>> findAll() {
         return ResponseEntity.ok(service.findOpen().stream()
                 .map(mapper::toResponse)
@@ -52,6 +53,7 @@ public class MissionController {
     }
 
     @GetMapping("/my-missions")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<MissionResponse>> findMine(@CurrentUserId Long userId) {
         return ResponseEntity.ok(service.findOwnedBy(userId).stream()
                 .map(mapper::toResponse)
@@ -59,12 +61,14 @@ public class MissionController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<MissionResponse> findById(@PathVariable Long id,
                                                     @CurrentUserId Long userId) {
         return ResponseEntity.ok(mapper.toResponse(service.findById(id, userId)));
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('DESIGNER')")
     public ResponseEntity<MissionResponse> update(@PathVariable Long id,
                                                   @Valid @RequestBody MissionRequest request,
                                                   @CurrentUserId Long userId) {
@@ -72,6 +76,7 @@ public class MissionController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('DESIGNER')")
     public ResponseEntity<Void> delete(@PathVariable Long id, @CurrentUserId Long userId) {
         service.delete(id, userId);
         return ResponseEntity.noContent().build();

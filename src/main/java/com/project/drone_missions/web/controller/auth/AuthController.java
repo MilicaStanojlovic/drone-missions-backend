@@ -11,6 +11,7 @@ import lombok.AllArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -25,6 +26,7 @@ public class AuthController {
     private final UserMapper mapper;
 
     @PostMapping("/register")
+    @PreAuthorize("permitAll()")
     public ResponseEntity<UserResponse> register(@Valid @RequestBody RegisterRequest request) {
         UserResponse response = mapper.toResponse(authService.createUser(
                 request.username(), request.email(), request.password(), request.role()));
@@ -36,6 +38,7 @@ public class AuthController {
      * (as {@code Bearer <token>}) and the authenticated user's profile in the body.
      */
     @PostMapping("/login")
+    @PreAuthorize("permitAll()")
     public ResponseEntity<UserResponse> login(@Valid @RequestBody LoginRequest request) {
         LoginResult result = authService.login(request.email(), request.password());
         return ResponseEntity.ok()
@@ -49,6 +52,7 @@ public class AuthController {
      * server-side. (Server-side invalidation would require a token blacklist.)
      */
     @PostMapping("/logout")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> logout() {
         return ResponseEntity.noContent().build();
     }
