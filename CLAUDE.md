@@ -33,7 +33,9 @@ Note: `mvnw.cmd test` boots the full Spring context (`@SpringBootTest`), which r
 
 ## Database
 
-Requires a PostgreSQL database named `drone-missions` on `localhost:5432` (user/password `postgres`/`postgres`), configured in `src/main/resources/application.properties`. Hibernate runs with `ddl-auto=update`, so entity classes drive the schema automatically — there are no migration files. `show-sql=true` logs generated SQL.
+Requires a PostgreSQL database named `drone-missions` on `localhost:5432` (user/password `postgres`/`postgres`), configured in `src/main/resources/application.properties`. `show-sql=true` logs generated SQL.
+
+**The schema is owned by Flyway migrations** in `src/main/resources/db/migration` (`V1__…` … `V6__…`, applied in version order at startup). Hibernate runs with `ddl-auto=validate` — it never alters the schema, only checks that the entities match what Flyway migrated (a mismatch fails boot). So a schema change is a **new versioned migration file plus the matching entity/column annotation** — never an entity edit alone. Name the next file `V<n>__snake_case_description.sql` and keep the entity's `@Column` (length/nullability) in sync so validation passes.
 
 ## Conventions
 
@@ -88,7 +90,7 @@ Built on Spring Security's **OAuth2 Resource Server** — use its built-ins, don
 - **Roles** (`DESIGNER` / `PILOT`, fixed at registration) ride in the token's `role` claim → mapped to a `ROLE_<role>` authority by Spring's `JwtGrantedAuthoritiesConverter`. **Role gating uses `@PreAuthorize`** (method security is on via `@EnableMethodSecurity`) — e.g. `@PreAuthorize("hasRole('DESIGNER')")` on mission create. Prefer `@PreAuthorize` over `SecurityConfig` request-matchers for role rules, and keep a single source (no duplicate rule in both places).
 - **Authorization is layered:** authentication rules in `SecurityConfig`; role checks via `@PreAuthorize`; **data-dependent rules in the service.** Mission visibility is role-free — `MissionService` decides by ownership + status: the open marketplace (`PUBLISHED`/`BIDDING`) is visible to all, `my-missions` is the caller's own, a single mission is visible if owned or open. **Ownership** for edit/delete is enforced there too (`MissionAccessDeniedException` → 403).
 - **Passwords** are BCrypt-hashed (`PasswordEncoder` bean) and never returned — `UserResponse` excludes the hash. Login credential checks go through the built-in `AuthenticationManager`, backed by `security.CustomUserDetailsService` + `security.UserPrincipal`.
-- **Error responses:** missing/invalid token → 401 via `security.RestAuthenticationEntryPoint` (its `commence` writes an `ErrorResponse`-shaped JSON body; this must be a filter-layer entry point because it fires before MVC). Role/permission denials → 403 via `GlobalExceptionHandler` (`AuthorizationDeniedException` from `@PreAuthorize`, and the `ForbiddenException` family).
+- **Error responses:** missing/invalid token → 401 via Spring Security's **default `BearerTokenAuthenticationEntryPoint`** (fires at the filter layer, before MVC — it returns a `WWW-Authenticate: Bearer` header with an empty body, **not** an `ErrorResponse` JSON body). Role/permission denials → 403 via `GlobalExceptionHandler` (`AuthorizationDeniedException` from `@PreAuthorize`, and the `ForbiddenException` family).
 
 ### API documentation (Swagger / OpenAPI)
 
