@@ -1,7 +1,6 @@
 package com.project.drone_missions.config;
 
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
-import com.project.drone_missions.security.RestAuthenticationEntryPoint;
 import lombok.AllArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -41,17 +40,15 @@ import java.nio.charset.StandardCharsets;
  *
  * <p>Authorization is layered: authentication rules here; role checks on the methods via
  * {@code @PreAuthorize} ({@link EnableMethodSecurity}); data-dependent rules (ownership,
- * mission state) in {@code MissionService}. Missing/invalid token → 401 via
- * {@link RestAuthenticationEntryPoint}; a method-security role denial → 403 via
- * {@code GlobalExceptionHandler}.
+ * mission state) in {@code MissionService}. Missing/invalid token → 401 via Spring
+ * Security's default {@code BearerTokenAuthenticationEntryPoint} (empty body at the
+ * filter layer, before MVC).
  */
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
 @AllArgsConstructor
 public class SecurityConfig {
-
-    private final RestAuthenticationEntryPoint authenticationEntryPoint;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtDecoder jwtDecoder) throws Exception {
@@ -65,9 +62,8 @@ public class SecurityConfig {
                         // API docs are open so Swagger UI loads without a token (dev convenience).
                         .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
                         .anyRequest().authenticated())
-                .exceptionHandling(exceptions -> exceptions.authenticationEntryPoint(authenticationEntryPoint))
                 .oauth2ResourceServer(oauth2 -> oauth2
-                        .authenticationEntryPoint(authenticationEntryPoint)
+
                         .jwt(jwt -> jwt
                                 .decoder(jwtDecoder)
                                 .jwtAuthenticationConverter(jwtAuthenticationConverter())));

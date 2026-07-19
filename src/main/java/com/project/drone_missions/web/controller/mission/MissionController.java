@@ -2,7 +2,7 @@ package com.project.drone_missions.web.controller.mission;
 
 import com.project.drone_missions.business.service.mission.MissionService;
 import com.project.drone_missions.data.model.Mission;
-import com.project.drone_missions.security.CurrentUserId;
+import com.project.drone_missions.security.UserPrincipal;
 import com.project.drone_missions.web.dto.mission.MissionRequest;
 import com.project.drone_missions.web.dto.mission.MissionResponse;
 import com.project.drone_missions.web.mapper.mission.MissionMapper;
@@ -10,6 +10,7 @@ import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -31,11 +32,11 @@ public class MissionController {
     private final MissionMapper mapper;
 
     @PostMapping
-    @PreAuthorize("hasRole('DESIGNER')") // TODO noviji nacin
+    @PreAuthorize("hasRole('DESIGNER')")
     public ResponseEntity<MissionResponse> create(@Valid @RequestBody MissionRequest request,
-                                                   @CurrentUserId Long userId) {
+                                                  @AuthenticationPrincipal Long userId) {  // UserPrincipal user
         Mission mission = mapper.toEntity(request);
-        mission.setUserId(userId);
+        mission.setUserId(userId); // user.getId()
         Mission created = service.create(mission);
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
                 .path("/{id}")
@@ -54,8 +55,8 @@ public class MissionController {
 
     @GetMapping("/my-missions")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<List<MissionResponse>> findMine(@CurrentUserId Long userId) {
-        return ResponseEntity.ok(service.findOwnedBy(userId).stream()
+    public ResponseEntity<List<MissionResponse>> findMine(@AuthenticationPrincipal long userId) { // UserPrincipal user
+        return ResponseEntity.ok(service.findOwnedBy(userId).stream()      //user.getId()
                 .map(mapper::toResponse)
                 .toList());
     }
@@ -63,7 +64,7 @@ public class MissionController {
     @GetMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<MissionResponse> findById(@PathVariable Long id,
-                                                    @CurrentUserId Long userId) {
+                                                    @AuthenticationPrincipal long userId) {
         return ResponseEntity.ok(mapper.toResponse(service.findById(id, userId)));
     }
 
@@ -71,13 +72,13 @@ public class MissionController {
     @PreAuthorize("hasRole('DESIGNER')")
     public ResponseEntity<MissionResponse> update(@PathVariable Long id,
                                                   @Valid @RequestBody MissionRequest request,
-                                                  @CurrentUserId Long userId) {
+                                                  @AuthenticationPrincipal long userId) {
         return ResponseEntity.ok(mapper.toResponse(service.update(id, mapper.toEntity(request), userId)));
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('DESIGNER')")
-    public ResponseEntity<Void> delete(@PathVariable Long id, @CurrentUserId Long userId) {
+    public ResponseEntity<Void> delete(@PathVariable Long id, @AuthenticationPrincipal long userId) {
         service.delete(id, userId);
         return ResponseEntity.noContent().build();
     }
