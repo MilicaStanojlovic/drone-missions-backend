@@ -6,6 +6,7 @@ import com.project.drone_missions.data.model.Mission;
 import com.project.drone_missions.data.model.MissionStatus;
 import com.project.drone_missions.data.repository.MissionRepository;
 import lombok.AllArgsConstructor;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -48,6 +49,8 @@ public class MissionService {
      */
     public Mission findById(Long id, Long currentUserId) {
         Mission mission = getOrThrow(id);
+
+       // Long currentUserId = Long.valueOf(SecurityContextHolder.getContext().getAuthentication().getName());
         if (!isVisibleTo(mission, currentUserId)) {
             throw new MissionNotFoundException(id);
         }
@@ -56,6 +59,7 @@ public class MissionService {
 
     public Mission update(Long id, Mission changes, Long currentUserId) {
         Mission mission = getOrThrow(id);
+
         requireOwner(mission, currentUserId);
         mission.setName(changes.getName());
         mission.setDescription(changes.getDescription());
@@ -67,6 +71,7 @@ public class MissionService {
     }
 
     public void delete(Long id, Long currentUserId) {
+        //Long currentUserId = Long.valueOf(SecurityContextHolder.getContext().getAuthentication().getName());
         Mission mission = getOrThrow(id);
         requireOwner(mission, currentUserId);
         repository.delete(mission);
