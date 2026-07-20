@@ -7,6 +7,7 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -17,32 +18,31 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.Instant;
 
 @Entity
+@Table(name = "users")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class Mission {
+public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String name;
-
-    @Column(length = 2000)
-    private String description;
-
-    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private MissionStatus status;
+    private String username;
 
-    // Id of the user who created and owns this mission. Nullable for legacy
-    // missions created before authentication existed; always set for new ones.
-    private Long userId;
+    @Column(nullable = false, unique = true)
+    private String email;
 
-    private Instant startTime;
+    // Stores the BCrypt hash, never the raw password.
+    @Column(name = "password_hash", nullable = false)
+    private String passwordHash;
 
-    private Instant endTime;
+    // Which side of the marketplace this account is on. Set at registration, never changed.
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 32)
+    private UserRole role;
 
     @CreationTimestamp
     @Column(updatable = false)
