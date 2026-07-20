@@ -34,9 +34,9 @@ public class MissionController {
     @PostMapping
     @PreAuthorize("hasRole('DESIGNER')")
     public ResponseEntity<MissionResponse> create(@Valid @RequestBody MissionRequest request,
-                                                  @AuthenticationPrincipal Long userId) {  // UserPrincipal user
+                                                  @AuthenticationPrincipal Long userId) {
         Mission mission = mapper.toEntity(request);
-        mission.setUserId(userId); // user.getId()
+        mission.setUserId(userId);
         Mission created = service.create(mission);
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
                 .path("/{id}")
@@ -55,8 +55,8 @@ public class MissionController {
 
     @GetMapping("/my-missions")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<List<MissionResponse>> findMine(@AuthenticationPrincipal long userId) { // UserPrincipal user
-        return ResponseEntity.ok(service.findOwnedBy(userId).stream()      //user.getId()
+    public ResponseEntity<List<MissionResponse>> findMine(@AuthenticationPrincipal long userId) {
+        return ResponseEntity.ok(service.findOwnedBy(userId).stream()
                 .map(mapper::toResponse)
                 .toList());
     }
