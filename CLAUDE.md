@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-Spring Boot 4.1 backend for managing drone missions. Java 25 LTS, Maven (via wrapper), PostgreSQL with Spring Data JPA. Implements Mission CRUD at `/api/v1/missions`, organized in a layered, by-feature package structure (see Conventions).
+Spring Boot 4.1 backend for managing drone missions. Java 25 LTS, Maven (via wrapper), PostgreSQL with Spring Data JPA. Implements Mission CRUD at `/api/v1/missions` and stateless JWT authentication / account management at `/api/v1/auth`, organized in a layered, by-feature package structure (see Conventions).
 
 ## JDK requirement (important)
 
@@ -33,9 +33,26 @@ Note: `mvnw.cmd test` boots the full Spring context (`@SpringBootTest`), which r
 
 ## Database
 
-Requires a PostgreSQL database named `drone-missions` on `localhost:5432` (user/password `postgres`/`postgres`), configured in `src/main/resources/application.properties`. Hibernate runs with `ddl-auto=update`, so entity classes drive the schema automatically — there are no migration files. `show-sql=true` logs generated SQL.
+Requires a PostgreSQL database named `drone-missions` on `localhost:5432` (user/password `postgres`/`postgres`), configured in `src/main/resources/application.properties`. `show-sql=true` logs generated SQL.
+
+**The schema is owned by Flyway migrations** in `src/main/resources/db/migration` (`V1__…` … `V6__…`, applied in version order at startup). Hibernate runs with `ddl-auto=validate` — it never alters the schema, only checks that the entities match what Flyway migrated (a mismatch fails boot). So a schema change is a **new versioned migration file plus the matching entity/column annotation** — never an entity edit alone. Name the next file `V<n>__snake_case_description.sql` and keep the entity's `@Column` (length/nullability) in sync so validation passes.
 
 ## Conventions
+
+### Spring-first — use the framework, don't reinvent it (read before writing any code)
+
+This is a Spring Boot application. **Prefer Spring Boot / Spring Security built-in features over hand-written code, always** — for security and for everything else. Before adding a class, filter, resolver, annotation, or helper, assume Spring already provides it and go find that feature first.
+
+- **Do not build something new or more complex when Spring already offers it and it fits.** A custom class that re-implements framework behaviour is a defect here, not a neutral choice — even if it works and is tested.
+- **Research before you implement.** Consult the official Spring reference documentation and, when useful, a web search for the current idiomatic approach for the Spring version in use (Spring Boot 4.1 / Spring Security 6+). Do not rely on memory or on older patterns; verify against the docs. Cite what you found when proposing an approach.
+- **Reach for the framework's own mechanisms**, e.g. method security (`@EnableMethodSecurity`, `@PreAuthorize`/`@PostAuthorize`), `authorizeHttpRequests` rules, `@AuthenticationPrincipal`, argument resolvers, bean validation, `AuthenticationManager`/`UserDetailsService`, exception handling via `@RestControllerAdvice` — rather than bespoke equivalents.
+- **When a built-in and a custom approach both work, choose the built-in** and keep the custom surface as small as possible. If custom code is genuinely unavoidable, say explicitly why the Spring feature does not cover the case before writing it.
+
+### Comments and TODOs — never delete mine
+
+- **Never delete, move, or rewrite a comment the author added** — most importantly `// TODO` comments, but any comment. Treat them as fixed markers.
+- When refactoring or replacing surrounding code, **carry the author's comments across verbatim**, keeping them attached to the line or block they annotate.
+- If a comment looks obsolete or wrong, **leave it in place and flag it** in your summary — do not remove it on your own initiative. Removal only ever happens when the author explicitly asks.
 
 - **Base package is `com.project.drone_missions`** (underscore, not hyphen). The artifactId `drone-missions` is not a valid Java package name, so all code lives under the underscored package. Keep new classes there.
 
@@ -45,7 +62,7 @@ Two layers, each organized by feature (`*.mission`, and `*.user`, etc. as domain
 
 - **Presentation — `web`**: controllers and mappers, per feature (`web.mission.MissionController`, `web.mission.MissionMapper`). Cross-cutting web infrastructure (e.g. `GlobalExceptionHandler`) lives at the `web` root.
 - **Business — `business`**: services and custom exceptions, per feature (`business.mission.MissionService`, `business.mission.MissionNotFoundException`). Shared bases (e.g. the abstract `NotFoundException`) live at the `business` root.
-- Supporting packages stay shared: `dto` (request/response records), `model` (JPA entities), `repository`, `config`.
+- Supporting packages stay shared: `data.model` (JPA entities), `data.repository`, `config`, and `security` (JWT/authentication infrastructure). Request/response records live under `web.dto.<feature>`.
 
 ### Strict separation of concerns
 
@@ -60,5 +77,22 @@ Two layers, each organized by feature (`*.mission`, and `*.user`, etc. as domain
 ### Exception handling
 
 - A single `@RestControllerAdvice` **`GlobalExceptionHandler`** (in `web`). Every response is built from an immutable **`ErrorResponse` record** via its Lombok **`@Builder`**.
-- Handlers, most-specific first: `MethodArgumentNotValidException` → 400 (per-field errors); `HttpMessageNotReadableException` → 400 (malformed body / unknown enum, so client errors never surface as 500); `NotFoundException` (base) → 404; **catch-all `Exception`** → 500 generic.
-- **Custom exceptions are domain-specific and self-documenting.** `NotFoundException` is an abstract base; each domain extends it (`MissionNotFoundException`, and `UserNotFoundException` once a user domain exists). The exception *type* conveys the error context — no need to read the message. Don't throw the base directly.
+- Handlers, most-specific first: `MethodArgumentNotValidException` → 400 (per-field errors); `HttpMessageNotReadableException` → 400 (malformed body / unknown enum, so client errors never surface as 500); `NotFoundException` → 404; `UnauthorizedException` → 401; `ForbiddenException` → 403; `ConflictException` → 409; **catch-all `Exception`** → 500 generic.
+- **Custom exceptions are domain-specific and self-documenting.** Each HTTP error class has an abstract base at the `business` root — `NotFoundException` (404), `UnauthorizedException` (401), `ForbiddenException` (403), `ConflictException` (409) — and every domain extends the right one (e.g. `MissionNotFoundException`, `UserNotFoundException`, `InvalidCredentialsException`, `MissionAccessDeniedException`, `EmailAlreadyExistsException`). The exception *type* conveys the error context — no need to read the message. Don't throw a base directly.
+
+### Security & authentication
+
+Built on Spring Security's **OAuth2 Resource Server** — use its built-ins, don't hand-roll JWT plumbing (see Spring-first above). Config is `config.SecurityConfig`.
+
+- **Stateless JWT.** All `/api/v1/**` endpoints require a valid `Authorization: Bearer <token>` **except** `POST /api/v1/auth/register` and `POST /api/v1/auth/login` (and the Swagger paths, below). Requests are authenticated by Spring's built-in `BearerTokenAuthenticationFilter` + a `JwtDecoder` bean (`NimbusJwtDecoder`, HS256, symmetric secret) — there is no custom filter.
+- **Tokens are minted** in `business.auth.AuthService` with Spring's `JwtEncoder` (`NimbusJwtEncoder`): subject = user id, plus a `role` claim. The HS256 secret and expiry come from `security.jwt.*` in `application.properties` (override via `SECURITY_JWT_SECRET` / `SECURITY_JWT_EXPIRATION_MS` in prod). Login returns the token in the `Authorization` **response header** and the profile in the body.
+- **Principal is the user id (`Long`)**, set by the JWT→authentication converter in `SecurityConfig` (a private method, not a class). Read it with the custom `@CurrentUserId Long userId` param (a meta-annotation over `@AuthenticationPrincipal`). Never trust a user id from the request body.
+- **Roles** (`DESIGNER` / `PILOT`, fixed at registration) ride in the token's `role` claim → mapped to a `ROLE_<role>` authority by Spring's `JwtGrantedAuthoritiesConverter`. **Role gating uses `@PreAuthorize`** (method security is on via `@EnableMethodSecurity`) — e.g. `@PreAuthorize("hasRole('DESIGNER')")` on mission create. Prefer `@PreAuthorize` over `SecurityConfig` request-matchers for role rules, and keep a single source (no duplicate rule in both places).
+- **Authorization is layered:** authentication rules in `SecurityConfig`; role checks via `@PreAuthorize`; **data-dependent rules in the service.** Mission visibility is role-free — `MissionService` decides by ownership + status: the open marketplace (`PUBLISHED`/`BIDDING`) is visible to all, `my-missions` is the caller's own, a single mission is visible if owned or open. **Ownership** for edit/delete is enforced there too (`MissionAccessDeniedException` → 403).
+- **Passwords** are BCrypt-hashed (`PasswordEncoder` bean) and never returned — `UserResponse` excludes the hash. Login credential checks go through the built-in `AuthenticationManager`, backed by `security.CustomUserDetailsService` + `security.UserPrincipal`.
+- **Error responses:** missing/invalid token → 401 via Spring Security's **default `BearerTokenAuthenticationEntryPoint`** (fires at the filter layer, before MVC — it returns a `WWW-Authenticate: Bearer` header with an empty body, **not** an `ErrorResponse` JSON body). Role/permission denials → 403 via `GlobalExceptionHandler` (`AuthorizationDeniedException` from `@PreAuthorize`, and the `ForbiddenException` family).
+
+### API documentation (Swagger / OpenAPI)
+
+- **springdoc-openapi** (`springdoc-openapi-starter-webmvc-ui`, the 3.x line for Spring Boot 4). Swagger UI at `/swagger-ui.html`, the OpenAPI JSON at `/v3/api-docs`. These paths are `permitAll` in `SecurityConfig` so the docs load without a token (dev convenience — lock down in prod if needed).
+- `config.OpenApiConfig` declares a `bearer`/JWT security scheme so the Swagger UI **Authorize** button lets you test secured endpoints (paste the token from login's `Authorization` header).
