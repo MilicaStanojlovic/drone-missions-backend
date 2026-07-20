@@ -12,9 +12,13 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
+import java.time.LocalDate;
+import java.util.List;
 
 @Entity
 @Getter
@@ -43,6 +47,22 @@ public class Mission {
     private Instant startTime;
 
     private Instant endTime;
+
+    // ---- flight plan (nullable until the mission is planned) ----
+
+    private String location;
+
+    private LocalDate biddingDeadline;
+
+    /** Ordered route, stored as a JSON array of lat/lng points. */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "jsonb")
+    private List<GeoPoint> waypoints;
+
+    /** Flight zone (circle or polygon), stored as a JSON object. */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "jsonb")
+    private Geofence geofence;
 
     @CreationTimestamp
     @Column(updatable = false)
