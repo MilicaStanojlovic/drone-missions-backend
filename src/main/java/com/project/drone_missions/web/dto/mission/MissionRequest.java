@@ -11,7 +11,7 @@ public record MissionRequest(
         @NotBlank String name,
         @Size(max = 2000) String description,
         @NotNull MissionStatus status,
-        Instant startTime,
-        Instant endTime
+        @NotNull Instant startTime,
+        @NotNull Instant endTime
 ) {
 }
