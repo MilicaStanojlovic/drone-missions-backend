@@ -15,6 +15,10 @@ public class MissionMapper {
         mission.setStatus(request.status());
         mission.setStartTime(request.startTime());
         mission.setEndTime(request.endTime());
+        mission.setLocation(request.location());
+        mission.setBiddingDeadline(request.biddingDeadline());
+        mission.setWaypoints(request.waypoints());
+        mission.setGeofence(request.geofence());
         return mission;
     }
 
@@ -27,6 +31,10 @@ public class MissionMapper {
                 mission.getUserId(),
                 mission.getStartTime(),
                 mission.getEndTime(),
+                mission.getLocation(),
+                mission.getBiddingDeadline(),
+                mission.getWaypoints(),
+                mission.getGeofence(),
                 mission.getCreatedAt(),
                 mission.getUpdatedAt()
         );

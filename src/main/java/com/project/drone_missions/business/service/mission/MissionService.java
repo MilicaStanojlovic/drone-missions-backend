@@ -65,6 +65,10 @@ public class MissionService {
         mission.setDescription(changes.getDescription());
         mission.setStartTime(changes.getStartTime());
         mission.setEndTime(changes.getEndTime());
+        mission.setLocation(changes.getLocation());
+        mission.setBiddingDeadline(changes.getBiddingDeadline());
+        mission.setWaypoints(changes.getWaypoints());
+        mission.setGeofence(changes.getGeofence());
         // status is intentionally not modified on update — a mission's
         // lifecycle status is never changed by an edit.
         return repository.save(mission);
