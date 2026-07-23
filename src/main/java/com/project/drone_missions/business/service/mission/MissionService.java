@@ -1,14 +1,20 @@
 package com.project.drone_missions.business.service.mission;
 
 import com.project.drone_missions.business.exception.mission.MissionAccessDeniedException;
+import com.project.drone_missions.business.exception.mission.MissionConflictException;
 import com.project.drone_missions.business.exception.mission.MissionNotFoundException;
 import com.project.drone_missions.data.model.Mission;
 import com.project.drone_missions.data.model.MissionStatus;
 import com.project.drone_missions.data.repository.MissionRepository;
+import jakarta.persistence.criteria.Predicate;
 import lombok.AllArgsConstructor;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -31,14 +37,96 @@ public class MissionService {
         return repository.save(mission);
     }
 
-    /** The open marketplace: every mission currently available for work, visible to all. */
-    public List<Mission> findOpen() {
-        return repository.findByStatusIn(OPEN_STATUSES);
+    /**
+     * The open marketplace: every mission currently available for work, visible to all,
+     * narrowed by the optional feed filters. Blank location/keyword and a null date are
+     * treated as "not filtering". The date selects missions flyable on that day — i.e.
+     * whose flight window overlaps it. Day bounds are computed in the server's local zone
+     * so the filter matches the dates as they were entered and are displayed (the client
+     * stores/shows flight windows in local time); a fixed UTC boundary would be off by the
+     * timezone offset. Assumes the app runs in a single timezone.
+     */
+    public List<Mission> findOpen(String location, String keyword, LocalDate date) {
+        String loc = blankToNull(location);
+        String kw = blankToNull(keyword);
+        ZoneId zone = ZoneId.systemDefault();
+        Instant dayStart = date == null ? null : date.atStartOfDay(zone).toInstant();
+        Instant dayEndExclusive = date == null ? null : date.plusDays(1).atStartOfDay(zone).toInstant();
+
+        Specification<Mission> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            predicates.add(root.get("status").in(OPEN_STATUSES));
+            if (loc != null) {
+                predicates.add(cb.like(cb.lower(root.<String>get("location")), "%" + loc.toLowerCase() + "%"));
+            }
+            if (kw != null) {
+                String pattern = "%" + kw.toLowerCase() + "%";
+                predicates.add(cb.or(
+                        cb.like(cb.lower(root.<String>get("description")), pattern),
+                        cb.like(cb.lower(root.<String>get("name")), pattern)));
+            }
+            if (dayStart != null) {
+                predicates.add(cb.and(
+                        cb.lessThan(root.<Instant>get("startTime"), dayEndExclusive),
+                        cb.greaterThanOrEqualTo(root.<Instant>get("endTime"), dayStart)));
+            }
+            query.orderBy(cb.desc(root.get("createdAt")));
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+        return repository.findAll(spec);
+    }
+
+    /** Treat a null/blank filter value as "not provided" so the query's IS NULL guard skips it. */
+    private static String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
     }
 
     /** The missions the caller created and owns. */
     public List<Mission> findOwnedBy(Long currentUserId) {
-        return repository.findByUserId(currentUserId);
+        List<Mission> missions = repository.findByUserId(currentUserId);
+        missions.forEach(this::maybeStartInProgress);
+        return missions;
+    }
+
+    /** The missions awarded to the calling pilot (their "jobs"). */
+    public List<Mission> findAwardedTo(Long pilotId) {
+        List<Mission> missions = repository.findByAwardedPilotId(pilotId);
+        missions.forEach(this::maybeStartInProgress);
+        return missions;
+    }
+
+    /**
+     * The winning pilot marks the mission finished, moving it to COMPLETED. Only the
+     * awarded pilot may do this, and only once the mission is actually underway
+     * (IN_PROGRESS) — before the start date it is still AWARDED, and after completion
+     * it cannot be completed again.
+     */
+    public Mission complete(Long id, Long pilotId) {
+        Mission mission = getOrThrow(id);
+        if (!pilotId.equals(mission.getAwardedPilotId())) {
+            throw new MissionAccessDeniedException(id);
+        }
+        maybeStartInProgress(mission);
+        if (mission.getStatus() != MissionStatus.IN_PROGRESS) {
+            throw new MissionConflictException(
+                    "Mission %d cannot be completed from status %s".formatted(id, mission.getStatus()));
+        }
+        mission.setStatus(MissionStatus.COMPLETED);
+        return repository.save(mission);
+    }
+
+    /**
+     * Lazily advance an awarded mission to IN_PROGRESS once its start time has arrived.
+     * There is no scheduler; the transition is applied whenever the mission is loaded,
+     * so its status is always current for anyone viewing it.
+     */
+    private void maybeStartInProgress(Mission mission) {
+        if (mission.getStatus() == MissionStatus.AWARDED
+                && mission.getStartTime() != null
+                && !mission.getStartTime().isAfter(Instant.now())) {
+            mission.setStatus(MissionStatus.IN_PROGRESS);
+            repository.save(mission);
+        }
     }
 
     /**
@@ -54,6 +142,7 @@ public class MissionService {
         if (!isVisibleTo(mission, currentUserId)) {
             throw new MissionNotFoundException(id);
         }
+        maybeStartInProgress(mission);
         return mission;
     }
 
@@ -86,9 +175,10 @@ public class MissionService {
                 .orElseThrow(() -> new MissionNotFoundException(id));
     }
 
-    /** Visible to its owner, or to anyone once it is open for work. */
+    /** Visible to its owner, to the awarded pilot, or to anyone once it is open for work. */
     private boolean isVisibleTo(Mission mission, Long currentUserId) {
         return currentUserId.equals(mission.getUserId())
+                || currentUserId.equals(mission.getAwardedPilotId())
                 || OPEN_STATUSES.contains(mission.getStatus());
     }
 
