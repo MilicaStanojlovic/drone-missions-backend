@@ -44,6 +44,10 @@ public class Mission {
     // missions created before authentication existed; always set for new ones.
     private Long userId;
 
+    // Id of the pilot whose bid was accepted. Null until the mission is awarded;
+    // set (with status → AWARDED) when the designer accepts a bid.
+    private Long awardedPilotId;
+
     private Instant startTime;
 
     private Instant endTime;
