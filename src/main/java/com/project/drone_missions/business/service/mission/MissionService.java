@@ -3,13 +3,21 @@ package com.project.drone_missions.business.service.mission;
 import com.project.drone_missions.business.exception.mission.MissionAccessDeniedException;
 import com.project.drone_missions.business.exception.mission.MissionConflictException;
 import com.project.drone_missions.business.exception.mission.MissionNotFoundException;
+import com.project.drone_missions.business.service.mail.EmailService;
+import com.project.drone_missions.business.service.notification.NotificationService;
+import com.project.drone_missions.data.model.Bid;
+import com.project.drone_missions.data.model.BidStatus;
 import com.project.drone_missions.data.model.Mission;
 import com.project.drone_missions.data.model.MissionStatus;
+import com.project.drone_missions.data.model.NotificationType;
+import com.project.drone_missions.data.repository.BidRepository;
 import com.project.drone_missions.data.repository.MissionRepository;
+import com.project.drone_missions.data.repository.UserRepository;
 import jakarta.persistence.criteria.Predicate;
 import lombok.AllArgsConstructor;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -32,6 +40,10 @@ public class MissionService {
             Set.of(MissionStatus.PUBLISHED, MissionStatus.BIDDING);
 
     private final MissionRepository repository;
+    private final BidRepository bidRepository;
+    private final UserRepository userRepository;
+    private final NotificationService notificationService;
+    private final EmailService emailService;
 
     public Mission create(Mission mission) {
         return repository.save(mission);
@@ -83,30 +95,43 @@ public class MissionService {
 
     /** The missions the caller created and owns. */
     public List<Mission> findOwnedBy(Long currentUserId) {
-        List<Mission> missions = repository.findByUserId(currentUserId);
-        missions.forEach(this::maybeStartInProgress);
-        return missions;
+        return repository.findByUserId(currentUserId);
     }
 
     /** The missions awarded to the calling pilot (their "jobs"). */
     public List<Mission> findAwardedTo(Long pilotId) {
-        List<Mission> missions = repository.findByAwardedPilotId(pilotId);
-        missions.forEach(this::maybeStartInProgress);
-        return missions;
+        return repository.findByAwardedPilotId(pilotId);
+    }
+
+    /**
+     * The awarded pilot starts the mission, moving it AWARDED → IN_PROGRESS. Only the
+     * awarded pilot may start it, and only while it is still AWARDED. Starting is a
+     * deliberate action — a mission never advances on its own.
+     */
+    public Mission start(Long id, Long pilotId) {
+        Mission mission = getOrThrow(id);
+        if (!pilotId.equals(mission.getAwardedPilotId())) {
+            throw new MissionAccessDeniedException(id);
+        }
+        if (mission.getStatus() != MissionStatus.AWARDED) {
+            throw new MissionConflictException(
+                    "Mission %d cannot be started from status %s".formatted(id, mission.getStatus()));
+        }
+        mission.setStatus(MissionStatus.IN_PROGRESS);
+        return repository.save(mission);
     }
 
     /**
      * The winning pilot marks the mission finished, moving it to COMPLETED. Only the
      * awarded pilot may do this, and only once the mission is actually underway
-     * (IN_PROGRESS) — before the start date it is still AWARDED, and after completion
-     * it cannot be completed again.
+     * (IN_PROGRESS) — it must be started first, and once completed it cannot be
+     * completed again.
      */
     public Mission complete(Long id, Long pilotId) {
         Mission mission = getOrThrow(id);
         if (!pilotId.equals(mission.getAwardedPilotId())) {
             throw new MissionAccessDeniedException(id);
         }
-        maybeStartInProgress(mission);
         if (mission.getStatus() != MissionStatus.IN_PROGRESS) {
             throw new MissionConflictException(
                     "Mission %d cannot be completed from status %s".formatted(id, mission.getStatus()));
@@ -116,17 +141,40 @@ public class MissionService {
     }
 
     /**
-     * Lazily advance an awarded mission to IN_PROGRESS once its start time has arrived.
-     * There is no scheduler; the transition is applied whenever the mission is loaded,
-     * so its status is always current for anyone viewing it.
+     * The mission's creator cancels it, moving it to CANCELLED. Allowed from any status
+     * that is not yet COMPLETED (and not already CANCELLED). Every outstanding bid is
+     * rejected so no pilot is left expecting to win, and the awarded pilot — if one was
+     * already chosen — is notified in-app and by (best-effort) email.
      */
-    private void maybeStartInProgress(Mission mission) {
-        if (mission.getStatus() == MissionStatus.AWARDED
-                && mission.getStartTime() != null
-                && !mission.getStartTime().isAfter(Instant.now())) {
-            mission.setStatus(MissionStatus.IN_PROGRESS);
-            repository.save(mission);
+    @Transactional
+    public Mission cancel(Long id, Long designerId) {
+        Mission mission = getOrThrow(id);
+        requireOwner(mission, designerId);
+        if (mission.getStatus() == MissionStatus.COMPLETED
+                || mission.getStatus() == MissionStatus.CANCELLED) {
+            throw new MissionConflictException(
+                    "Mission %d cannot be cancelled from status %s".formatted(id, mission.getStatus()));
         }
+        mission.setStatus(MissionStatus.CANCELLED);
+        repository.save(mission);
+
+        bidRepository.findByMissionIdOrderByCreatedAtDesc(mission.getId()).forEach(bid -> {
+            if (bid.getStatus() == BidStatus.PENDING || bid.getStatus() == BidStatus.ACCEPTED) {
+                bid.setStatus(BidStatus.REJECTED);
+                bidRepository.save(bid);
+            }
+        });
+
+        Long pilotId = mission.getAwardedPilotId();
+        if (pilotId != null) {
+            notificationService.create(pilotId, NotificationType.MISSION_CANCELLED,
+                    "Mission cancelled",
+                    "\"%s\" was cancelled by the designer.".formatted(mission.getName()),
+                    mission.getId());
+            userRepository.findById(pilotId)
+                    .ifPresent(pilot -> emailService.sendMissionCancelled(pilot, mission));
+        }
+        return mission;
     }
 
     /**
@@ -142,7 +190,6 @@ public class MissionService {
         if (!isVisibleTo(mission, currentUserId)) {
             throw new MissionNotFoundException(id);
         }
-        maybeStartInProgress(mission);
         return mission;
     }
 
