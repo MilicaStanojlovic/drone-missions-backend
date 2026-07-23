@@ -12,6 +12,8 @@ public interface MissionRepository extends JpaRepository<Mission, Long>, JpaSpec
 
     List<Mission> findByUserId(Long userId);
 
+    List<Mission> findByAwardedPilotId(Long awardedPilotId);
+
     // The open-feed search is built dynamically as a Specification in MissionService, so only
     // the filters actually supplied become predicates — no null bind parameters reach SQL.
 }

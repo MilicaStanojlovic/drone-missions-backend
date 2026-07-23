@@ -1,6 +1,7 @@
 package com.project.drone_missions.business.service.mission;
 
 import com.project.drone_missions.business.exception.mission.MissionAccessDeniedException;
+import com.project.drone_missions.business.exception.mission.MissionConflictException;
 import com.project.drone_missions.business.exception.mission.MissionNotFoundException;
 import com.project.drone_missions.data.model.Mission;
 import com.project.drone_missions.data.model.MissionStatus;
@@ -8,7 +9,6 @@ import com.project.drone_missions.data.repository.MissionRepository;
 import jakarta.persistence.criteria.Predicate;
 import lombok.AllArgsConstructor;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -76,14 +76,57 @@ public class MissionService {
         return repository.findAll(spec);
     }
 
-    /** Treat a null/blank filter value as "not provided" so the query skips it. */
+    /** Treat a null/blank filter value as "not provided" so the query's IS NULL guard skips it. */
     private static String blankToNull(String value) {
         return value == null || value.isBlank() ? null : value.trim();
     }
 
     /** The missions the caller created and owns. */
     public List<Mission> findOwnedBy(Long currentUserId) {
-        return repository.findByUserId(currentUserId);
+        List<Mission> missions = repository.findByUserId(currentUserId);
+        missions.forEach(this::maybeStartInProgress);
+        return missions;
+    }
+
+    /** The missions awarded to the calling pilot (their "jobs"). */
+    public List<Mission> findAwardedTo(Long pilotId) {
+        List<Mission> missions = repository.findByAwardedPilotId(pilotId);
+        missions.forEach(this::maybeStartInProgress);
+        return missions;
+    }
+
+    /**
+     * The winning pilot marks the mission finished, moving it to COMPLETED. Only the
+     * awarded pilot may do this, and only once the mission is actually underway
+     * (IN_PROGRESS) — before the start date it is still AWARDED, and after completion
+     * it cannot be completed again.
+     */
+    public Mission complete(Long id, Long pilotId) {
+        Mission mission = getOrThrow(id);
+        if (!pilotId.equals(mission.getAwardedPilotId())) {
+            throw new MissionAccessDeniedException(id);
+        }
+        maybeStartInProgress(mission);
+        if (mission.getStatus() != MissionStatus.IN_PROGRESS) {
+            throw new MissionConflictException(
+                    "Mission %d cannot be completed from status %s".formatted(id, mission.getStatus()));
+        }
+        mission.setStatus(MissionStatus.COMPLETED);
+        return repository.save(mission);
+    }
+
+    /**
+     * Lazily advance an awarded mission to IN_PROGRESS once its start time has arrived.
+     * There is no scheduler; the transition is applied whenever the mission is loaded,
+     * so its status is always current for anyone viewing it.
+     */
+    private void maybeStartInProgress(Mission mission) {
+        if (mission.getStatus() == MissionStatus.AWARDED
+                && mission.getStartTime() != null
+                && !mission.getStartTime().isAfter(Instant.now())) {
+            mission.setStatus(MissionStatus.IN_PROGRESS);
+            repository.save(mission);
+        }
     }
 
     /**
@@ -99,6 +142,7 @@ public class MissionService {
         if (!isVisibleTo(mission, currentUserId)) {
             throw new MissionNotFoundException(id);
         }
+        maybeStartInProgress(mission);
         return mission;
     }
 
@@ -131,9 +175,10 @@ public class MissionService {
                 .orElseThrow(() -> new MissionNotFoundException(id));
     }
 
-    /** Visible to its owner, or to anyone once it is open for work. */
+    /** Visible to its owner, to the awarded pilot, or to anyone once it is open for work. */
     private boolean isVisibleTo(Mission mission, Long currentUserId) {
         return currentUserId.equals(mission.getUserId())
+                || currentUserId.equals(mission.getAwardedPilotId())
                 || OPEN_STATUSES.contains(mission.getStatus());
     }
 
