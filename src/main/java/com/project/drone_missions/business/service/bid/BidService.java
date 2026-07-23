@@ -4,12 +4,17 @@ import com.project.drone_missions.business.exception.bid.BidConflictException;
 import com.project.drone_missions.business.exception.bid.BidNotFoundException;
 import com.project.drone_missions.business.exception.mission.MissionAccessDeniedException;
 import com.project.drone_missions.business.exception.mission.MissionNotFoundException;
+import com.project.drone_missions.business.service.mail.EmailService;
+import com.project.drone_missions.business.service.notification.NotificationService;
 import com.project.drone_missions.data.model.Bid;
 import com.project.drone_missions.data.model.BidStatus;
 import com.project.drone_missions.data.model.Mission;
 import com.project.drone_missions.data.model.MissionStatus;
+import com.project.drone_missions.data.model.NotificationType;
+import com.project.drone_missions.data.model.User;
 import com.project.drone_missions.data.repository.BidRepository;
 import com.project.drone_missions.data.repository.MissionRepository;
+import com.project.drone_missions.data.repository.UserRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,6 +33,9 @@ public class BidService {
 
     private final BidRepository bidRepository;
     private final MissionRepository missionRepository;
+    private final UserRepository userRepository;
+    private final NotificationService notificationService;
+    private final EmailService emailService;
 
     /**
      * Place the caller's bid on a mission, or update it if a pending one already
@@ -60,6 +68,13 @@ public class BidService {
         if (mission.getStatus() == MissionStatus.PUBLISHED) {
             mission.setStatus(MissionStatus.BIDDING);
             missionRepository.save(mission);
+        }
+
+        // Let the mission's owner know a bid came in (best-effort email).
+        User designer = userRepository.findById(mission.getUserId()).orElse(null);
+        String pilotName = userRepository.findById(pilotId).map(User::getUsername).orElse("A pilot");
+        if (designer != null) {
+            emailService.sendNewBid(designer, mission, pilotName, amount, message);
         }
         return saved;
     }
@@ -124,18 +139,38 @@ public class BidService {
 
         bid.setStatus(BidStatus.ACCEPTED);
         bidRepository.save(bid);
-        List<Bid> losers = bidRepository.findByMissionIdAndStatus(mission.getId(), BidStatus.PENDING);
-        losers.stream()
+        List<Bid> losers = bidRepository.findByMissionIdAndStatus(mission.getId(), BidStatus.PENDING).stream()
                 .filter(other -> !other.getId().equals(bid.getId()))
-                .forEach(other -> {
-                    other.setStatus(BidStatus.REJECTED);
-                    bidRepository.save(other);
-                });
+                .toList();
+        losers.forEach(other -> {
+            other.setStatus(BidStatus.REJECTED);
+            bidRepository.save(other);
+        });
 
         mission.setStatus(MissionStatus.AWARDED);
         mission.setAwardedPilotId(bid.getPilotId());
         missionRepository.save(mission);
+
+        notifyDecision(mission, bid, true);
+        losers.forEach(loser -> notifyDecision(mission, loser, false));
         return bid;
+    }
+
+    /** In-app notification + best-effort email to a pilot whose bid was decided. */
+    private void notifyDecision(Mission mission, Bid bid, boolean accepted) {
+        if (accepted) {
+            notificationService.create(bid.getPilotId(), NotificationType.BID_ACCEPTED,
+                    "Bid accepted",
+                    "Your bid on \"%s\" was accepted — the mission is yours.".formatted(mission.getName()),
+                    mission.getId());
+        } else {
+            notificationService.create(bid.getPilotId(), NotificationType.BID_REJECTED,
+                    "Bid not selected",
+                    "Your bid on \"%s\" wasn't selected.".formatted(mission.getName()),
+                    mission.getId());
+        }
+        userRepository.findById(bid.getPilotId())
+                .ifPresent(pilot -> emailService.sendBidDecision(pilot, mission, bid.getAmount(), accepted));
     }
 
     private Mission getMissionOrThrow(Long missionId) {

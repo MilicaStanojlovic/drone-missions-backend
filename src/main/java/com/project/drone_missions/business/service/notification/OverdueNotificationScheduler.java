@@ -1,0 +1,61 @@
+package com.project.drone_missions.business.service.notification;
+
+import com.project.drone_missions.business.service.mail.EmailService;
+import com.project.drone_missions.data.model.Mission;
+import com.project.drone_missions.data.model.MissionStatus;
+import com.project.drone_missions.data.model.NotificationType;
+import com.project.drone_missions.data.repository.MissionRepository;
+import com.project.drone_missions.data.repository.UserRepository;
+import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Component;
+
+import java.time.Instant;
+import java.util.List;
+import java.util.Set;
+
+/**
+ * Hourly sweep that nudges pilots about won missions whose flight window has
+ * ended. For each newly-overdue mission it creates a MISSION_OVERDUE
+ * notification and sends the "has your flight ended?" email — once per mission,
+ * guarded by {@link NotificationService#overdueExists}.
+ */
+@Component
+@AllArgsConstructor
+@Slf4j
+public class OverdueNotificationScheduler {
+
+    private static final Set<MissionStatus> ACTIVE_AWARDED =
+            Set.of(MissionStatus.AWARDED, MissionStatus.IN_PROGRESS);
+
+    private final MissionRepository missionRepository;
+    private final UserRepository userRepository;
+    private final NotificationService notificationService;
+    private final EmailService emailService;
+
+    /** Runs at the top of every hour. */
+    @Scheduled(cron = "0 0 * * * *")
+    public void notifyOverdueMissions() {
+        List<Mission> overdue = missionRepository
+                .findByAwardedPilotIdIsNotNullAndStatusInAndEndTimeBefore(ACTIVE_AWARDED, Instant.now());
+        int notified = 0;
+        for (Mission mission : overdue) {
+            Long pilotId = mission.getAwardedPilotId();
+            if (notificationService.overdueExists(pilotId, mission.getId())) {
+                continue;
+            }
+            notificationService.create(pilotId, NotificationType.MISSION_OVERDUE,
+                    "Has your flight ended?",
+                    "\"%s\" has passed its end date. Mark it finished if the flight is done."
+                            .formatted(mission.getName()),
+                    mission.getId());
+            userRepository.findById(pilotId)
+                    .ifPresent(pilot -> emailService.sendMissionOverdue(pilot, mission));
+            notified++;
+        }
+        if (notified > 0) {
+            log.info("Overdue sweep: notified {} pilot(s) of finished-flight checks", notified);
+        }
+    }
+}
