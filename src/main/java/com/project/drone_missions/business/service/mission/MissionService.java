@@ -5,10 +5,16 @@ import com.project.drone_missions.business.exception.mission.MissionNotFoundExce
 import com.project.drone_missions.data.model.Mission;
 import com.project.drone_missions.data.model.MissionStatus;
 import com.project.drone_missions.data.repository.MissionRepository;
+import jakarta.persistence.criteria.Predicate;
 import lombok.AllArgsConstructor;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -31,9 +37,48 @@ public class MissionService {
         return repository.save(mission);
     }
 
-    /** The open marketplace: every mission currently available for work, visible to all. */
-    public List<Mission> findOpen() {
-        return repository.findByStatusIn(OPEN_STATUSES);
+    /**
+     * The open marketplace: every mission currently available for work, visible to all,
+     * narrowed by the optional feed filters. Blank location/keyword and a null date are
+     * treated as "not filtering". The date selects missions flyable on that day — i.e.
+     * whose flight window overlaps it. Day bounds are computed in the server's local zone
+     * so the filter matches the dates as they were entered and are displayed (the client
+     * stores/shows flight windows in local time); a fixed UTC boundary would be off by the
+     * timezone offset. Assumes the app runs in a single timezone.
+     */
+    public List<Mission> findOpen(String location, String keyword, LocalDate date) {
+        String loc = blankToNull(location);
+        String kw = blankToNull(keyword);
+        ZoneId zone = ZoneId.systemDefault();
+        Instant dayStart = date == null ? null : date.atStartOfDay(zone).toInstant();
+        Instant dayEndExclusive = date == null ? null : date.plusDays(1).atStartOfDay(zone).toInstant();
+
+        Specification<Mission> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            predicates.add(root.get("status").in(OPEN_STATUSES));
+            if (loc != null) {
+                predicates.add(cb.like(cb.lower(root.<String>get("location")), "%" + loc.toLowerCase() + "%"));
+            }
+            if (kw != null) {
+                String pattern = "%" + kw.toLowerCase() + "%";
+                predicates.add(cb.or(
+                        cb.like(cb.lower(root.<String>get("description")), pattern),
+                        cb.like(cb.lower(root.<String>get("name")), pattern)));
+            }
+            if (dayStart != null) {
+                predicates.add(cb.and(
+                        cb.lessThan(root.<Instant>get("startTime"), dayEndExclusive),
+                        cb.greaterThanOrEqualTo(root.<Instant>get("endTime"), dayStart)));
+            }
+            query.orderBy(cb.desc(root.get("createdAt")));
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+        return repository.findAll(spec);
+    }
+
+    /** Treat a null/blank filter value as "not provided" so the query skips it. */
+    private static String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
     }
 
     /** The missions the caller created and owns. */
