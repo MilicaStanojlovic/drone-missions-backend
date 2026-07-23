@@ -14,6 +14,7 @@ public record MissionResponse(
         String description,
         MissionStatus status,
         Long userId,
+        String designerEmail,
         Long awardedPilotId,
         Instant startTime,
         Instant endTime,
