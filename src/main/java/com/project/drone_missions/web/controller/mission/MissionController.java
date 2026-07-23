@@ -67,6 +67,15 @@ public class MissionController {
                 .toList());
     }
 
+    /** The calling pilot's awarded missions ("jobs"). */
+    @GetMapping("/my-jobs")
+    @PreAuthorize("hasRole('PILOT')")
+    public ResponseEntity<List<MissionResponse>> findMyJobs(@AuthenticationPrincipal long userId) {
+        return ResponseEntity.ok(service.findAwardedTo(userId).stream()
+                .map(mapper::toResponse)
+                .toList());
+    }
+
     @GetMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<MissionResponse> findById(@PathVariable Long id,
@@ -87,5 +96,13 @@ public class MissionController {
     public ResponseEntity<Void> delete(@PathVariable Long id, @AuthenticationPrincipal long userId) {
         service.delete(id, userId);
         return ResponseEntity.noContent().build();
+    }
+
+    /** The awarded pilot marks the mission finished (IN_PROGRESS → COMPLETED). */
+    @PostMapping("/{id}/complete")
+    @PreAuthorize("hasRole('PILOT')")
+    public ResponseEntity<MissionResponse> complete(@PathVariable Long id,
+                                                    @AuthenticationPrincipal long userId) {
+        return ResponseEntity.ok(mapper.toResponse(service.complete(id, userId)));
     }
 }
