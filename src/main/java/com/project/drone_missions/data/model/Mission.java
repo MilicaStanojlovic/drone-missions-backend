@@ -25,7 +25,7 @@ import java.util.List;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class Mission {
+public class Mission { // TODO Base Entity with id, createdAt, updatedAt with inheritance
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
