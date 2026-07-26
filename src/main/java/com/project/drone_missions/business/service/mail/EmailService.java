@@ -46,11 +46,19 @@ public class EmailService {
         this.frontendUrl = frontendUrl;
         this.redirectTo = redirectTo;
     }
-
-    /** Notify the designer that a pilot placed a bid on their mission. */
+// TODO COMMENTS
+    /**
+     *
+     *
+     * @param designer
+     * @param mission
+     * @param pilotName
+     * @param amount
+     * @param message
+     */
     @Async
     public void sendNewBid(User designer, Mission mission, String pilotName, BigDecimal amount, String message) {
-        Context ctx = baseContext(designer, mission);
+        Context ctx = baseContext(designer, mission); // smesti u record TODO
         ctx.setVariable("pilotName", pilotName);
         ctx.setVariable("amount", amount);
         ctx.setVariable("bidMessage", message);
@@ -85,7 +93,7 @@ public class EmailService {
 
     /** Tell the awarded pilot that the designer cancelled the mission they had won. */
     @Async
-    public void sendMissionCancelled(User pilot, Mission mission) {
+    public void sendMissionCancelled(User pilot, Mission mission) { //
         Context ctx = baseContext(pilot, mission);
         ctx.setVariable("ctaUrl", missionUrl(mission.getId()));
         send(pilot.getEmail(), "Mission \"%s\" was cancelled".formatted(mission.getName()),

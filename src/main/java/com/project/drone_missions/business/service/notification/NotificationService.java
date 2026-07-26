@@ -17,6 +17,7 @@ public class NotificationService {
     private final NotificationRepository repository;
 
     /** Create and persist a notification for a user. */
+    // TODO record for parameters
     public Notification create(Long userId, NotificationType type, String title, String message, Long missionId) {
         Notification notification = new Notification();
         notification.setUserId(userId);
