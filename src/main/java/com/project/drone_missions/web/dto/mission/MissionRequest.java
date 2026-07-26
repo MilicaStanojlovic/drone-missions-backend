@@ -18,9 +18,12 @@ public record MissionRequest(
         @NotNull MissionStatus status,
         @NotNull Instant startTime,
         @NotNull Instant endTime,
-        // ---- flight plan (optional) ----
+        // ---- flight plan ----
         @Size(max = 255) String location,
         LocalDate biddingDeadline,
+        // a flight path needs a start and an end — reject a missing path or a single dangling point
+        @NotNull(message = "a flight path needs at least 2 waypoints")
+        @Size(min = 2, message = "a flight path needs at least 2 waypoints")
         @Valid List<GeoPoint> waypoints,
         @Valid Geofence geofence
 ) {
