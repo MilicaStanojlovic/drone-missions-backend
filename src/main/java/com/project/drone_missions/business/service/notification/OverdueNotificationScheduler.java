@@ -12,6 +12,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Set;
 
@@ -34,11 +36,15 @@ public class OverdueNotificationScheduler {
     private final NotificationService notificationService;
     private final EmailService emailService;
 
-    /** Runs at the top of every hour. */
-    @Scheduled(cron = "0 0 * * * *")
+    /** Runs once a day at 09:00. */
+    @Scheduled(cron = "0 0 9 * * *", zone = "Europe/Belgrade")
     public void notifyOverdueMissions() {
+        ZoneId zone = ZoneId.of("Europe/Belgrade");
+        Instant cutoff = LocalDate.now(zone).atStartOfDay(zone).toInstant();
+
         List<Mission> overdue = missionRepository
-                .findByAwardedPilotIdIsNotNullAndStatusInAndEndTimeBefore(ACTIVE_AWARDED, Instant.now());
+                .findByAwardedPilotIdIsNotNullAndStatusInAndEndTimeBefore(ACTIVE_AWARDED, cutoff);
+
         int notified = 0;
         for (Mission mission : overdue) {
             Long pilotId = mission.getAwardedPilotId();
