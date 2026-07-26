@@ -31,17 +31,20 @@ public class EmailService {
     private final boolean enabled;
     private final String from;
     private final String frontendUrl;
+    private final String redirectTo;
 
     public EmailService(JavaMailSender mailSender,
                         TemplateEngine templateEngine,
                         @Value("${app.mail.enabled:false}") boolean enabled,
                         @Value("${app.mail.from:DroneMissions <no-reply@dronemissions.app>}") String from,
-                        @Value("${app.frontend-url:http://localhost:4200}") String frontendUrl) {
+                        @Value("${app.frontend-url:http://localhost:4200}") String frontendUrl,
+                        @Value("${app.mail.redirect-to:}") String redirectTo) {
         this.mailSender = mailSender;
         this.templateEngine = templateEngine;
         this.enabled = enabled;
         this.from = from;
         this.frontendUrl = frontendUrl;
+        this.redirectTo = redirectTo;
     }
 
     /** Notify the designer that a pilot placed a bid on their mission. */
@@ -80,6 +83,15 @@ public class EmailService {
                 "email/mission-overdue", ctx);
     }
 
+    /** Tell the awarded pilot that the designer cancelled the mission they had won. */
+    @Async
+    public void sendMissionCancelled(User pilot, Mission mission) {
+        Context ctx = baseContext(pilot, mission);
+        ctx.setVariable("ctaUrl", missionUrl(mission.getId()));
+        send(pilot.getEmail(), "Mission \"%s\" was cancelled".formatted(mission.getName()),
+                "email/mission-cancelled", ctx);
+    }
+
     private Context baseContext(User recipient, Mission mission) {
         Context ctx = new Context();
         ctx.setVariable("recipientName", recipient.getUsername());
@@ -106,18 +118,27 @@ public class EmailService {
             return;
         }
 
+        // Dev testing: when app.mail.redirect-to is set, deliver every message to that
+        // inbox instead of the real recipient, tagging the subject with the address it
+        // was actually meant for. Blank (the default) = normal delivery to `to`.
+        String recipient = to;
+        if (!redirectTo.isBlank()) {
+            subject = "[→ %s] %s".formatted(to, subject);
+            recipient = redirectTo;
+        }
+
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, false, StandardCharsets.UTF_8.name());
             helper.setFrom(from);
-            helper.setTo(to);
+            helper.setTo(recipient);
             helper.setSubject(subject);
             helper.setText(html, true);
             mailSender.send(message);
-            log.info("Sent email to={} subject=\"{}\"", to, subject);
+            log.info("Sent email to={} (intended {}) subject=\"{}\"", recipient, to, subject);
         } catch (Exception e) {
             // Best-effort: a mail failure must never break the bid/scheduler flow.
-            log.error("Failed to send email to={} subject=\"{}\"", to, subject, e);
+            log.error("Failed to send email to={} subject=\"{}\"", recipient, subject, e);
         }
     }
 }

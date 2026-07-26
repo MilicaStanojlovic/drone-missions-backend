@@ -98,11 +98,27 @@ public class MissionController {
         return ResponseEntity.noContent().build();
     }
 
+    /** The awarded pilot starts the mission (AWARDED → IN_PROGRESS). */
+    @PostMapping("/{id}/start")
+    @PreAuthorize("hasRole('PILOT')")
+    public ResponseEntity<MissionResponse> start(@PathVariable Long id,
+                                                 @AuthenticationPrincipal long userId) {
+        return ResponseEntity.ok(mapper.toResponse(service.start(id, userId)));
+    }
+
     /** The awarded pilot marks the mission finished (IN_PROGRESS → COMPLETED). */
     @PostMapping("/{id}/complete")
     @PreAuthorize("hasRole('PILOT')")
     public ResponseEntity<MissionResponse> complete(@PathVariable Long id,
                                                     @AuthenticationPrincipal long userId) {
         return ResponseEntity.ok(mapper.toResponse(service.complete(id, userId)));
+    }
+
+    /** The mission's creator cancels it (→ CANCELLED), rejecting any outstanding bids. */
+    @PostMapping("/{id}/cancel")
+    @PreAuthorize("hasRole('DESIGNER')")
+    public ResponseEntity<MissionResponse> cancel(@PathVariable Long id,
+                                                  @AuthenticationPrincipal long userId) {
+        return ResponseEntity.ok(mapper.toResponse(service.cancel(id, userId)));
     }
 }

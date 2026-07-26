@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Set;
 
@@ -47,6 +48,12 @@ public class BidService {
         if (!BIDDABLE_STATUSES.contains(mission.getStatus())) {
             throw new BidConflictException(
                     "Mission %d is not open for bidding".formatted(missionId));
+        }
+        // The deadline day itself is still open; bidding closes once it has passed.
+        if (mission.getBiddingDeadline() != null
+                && LocalDate.now().isAfter(mission.getBiddingDeadline())) {
+            throw new BidConflictException(
+                    "The bidding deadline for mission %d has passed".formatted(missionId));
         }
 
         Bid bid = bidRepository.findByMissionIdAndPilotId(missionId, pilotId)
