@@ -17,14 +17,13 @@ public class NotificationService {
     private final NotificationRepository repository;
 
     /** Create and persist a notification for a user. */
-    // TODO record for parameters
-    public Notification create(Long userId, NotificationType type, String title, String message, Long missionId) {
+    public Notification create(NewNotification request) {
         Notification notification = new Notification();
-        notification.setUserId(userId);
-        notification.setType(type);
-        notification.setTitle(title);
-        notification.setMessage(message);
-        notification.setMissionId(missionId);
+        notification.setUserId(request.userId());
+        notification.setType(request.type());
+        notification.setTitle(request.title());
+        notification.setMessage(request.message());
+        notification.setMissionId(request.missionId());
         return repository.save(notification);
     }
 

@@ -47,21 +47,15 @@ public class EmailService {
         this.redirectTo = redirectTo;
     }
 // TODO COMMENTS
-    /**
-     *
-     *
-     * @param designer
-     * @param mission
-     * @param pilotName
-     * @param amount
-     * @param message
-     */
+    /** Tell a mission's owner that a pilot has placed a bid on it. */
     @Async
-    public void sendNewBid(User designer, Mission mission, String pilotName, BigDecimal amount, String message) {
-        Context ctx = baseContext(designer, mission); // smesti u record TODO
-        ctx.setVariable("pilotName", pilotName);
-        ctx.setVariable("amount", amount);
-        ctx.setVariable("bidMessage", message);
+    public void sendNewBid(NewBidEmail email) {
+        User designer = email.designer();
+        Mission mission = email.mission();
+        Context ctx = baseContext(designer, mission);
+        ctx.setVariable("pilotName", email.pilotName());
+        ctx.setVariable("amount", email.amount());
+        ctx.setVariable("bidMessage", email.message());
         ctx.setVariable("ctaUrl", missionUrl(mission.getId()));
         send(designer.getEmail(), "New bid on \"%s\"".formatted(mission.getName()), "email/new-bid", ctx);
     }
@@ -93,7 +87,7 @@ public class EmailService {
 
     /** Tell the awarded pilot that the designer cancelled the mission they had won. */
     @Async
-    public void sendMissionCancelled(User pilot, Mission mission) { //
+    public void sendMissionCancelled(User pilot, Mission mission) {
         Context ctx = baseContext(pilot, mission);
         ctx.setVariable("ctaUrl", missionUrl(mission.getId()));
         send(pilot.getEmail(), "Mission \"%s\" was cancelled".formatted(mission.getName()),
