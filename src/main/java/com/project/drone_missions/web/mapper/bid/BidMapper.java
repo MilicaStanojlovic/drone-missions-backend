@@ -2,8 +2,8 @@ package com.project.drone_missions.web.mapper.bid;
 
 import com.project.drone_missions.data.model.Bid;
 import com.project.drone_missions.data.model.Mission;
+import com.project.drone_missions.data.access.MissionDataAccess;
 import com.project.drone_missions.data.model.User;
-import com.project.drone_missions.data.repository.MissionRepository;
 import com.project.drone_missions.data.repository.UserRepository;
 import com.project.drone_missions.web.dto.bid.BidResponse;
 import lombok.AllArgsConstructor;
@@ -17,7 +17,7 @@ import org.springframework.stereotype.Component;
 @AllArgsConstructor
 public class BidMapper {
 
-    private final MissionRepository missionRepository;
+    private final MissionDataAccess missionRepository;
     private final UserRepository userRepository;
 
     public BidResponse toResponse(Bid bid) {

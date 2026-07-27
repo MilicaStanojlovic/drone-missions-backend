@@ -60,9 +60,32 @@ This is a Spring Boot application. **Prefer Spring Boot / Spring Security built-
 
 Two layers, each organized by feature (`*.mission`, and `*.user`, etc. as domains are added):
 
-- **Presentation — `web`**: controllers and mappers, per feature (`web.mission.MissionController`, `web.mission.MissionMapper`). Cross-cutting web infrastructure (e.g. `GlobalExceptionHandler`) lives at the `web` root.
-- **Business — `business`**: services and custom exceptions, per feature (`business.mission.MissionService`, `business.mission.MissionNotFoundException`). Shared bases (e.g. the abstract `NotFoundException`) live at the `business` root.
-- Supporting packages stay shared: `data.model` (JPA entities), `data.repository`, `config`, and `security` (JWT/authentication infrastructure). Request/response records live under `web.dto.<feature>`.
+- **Presentation — `web`**: controllers and mappers, per feature (`web.controller.mission.MissionController`, `web.mapper.mission.MissionMapper`). Cross-cutting web infrastructure (e.g. `GlobalExceptionHandler`) lives at the `web` root.
+- **Business — `business`**: services and custom exceptions, per feature (`business.service.mission.MissionService`, `business.exception.mission.MissionNotFoundException`). Shared bases (e.g. the abstract `NotFoundException`) live at the `business` root.
+- Supporting packages stay shared: `data.model` (JPA entities), `data.repository`, `data.access` (see below), `config`, and `security` (JWT/authentication infrastructure). Request/response records live under `web.dto.<feature>`.
+
+### Data access layer — `data.access`
+
+**Business and web code depends on `data.access.*DataAccess` interfaces, never on `data.repository.*` directly.** Spring Data repositories are an implementation detail hidden behind the DAL; `JpaMissionDataAccess` is the only class permitted to reference `MissionRepository`.
+
+That rule is load-bearing, not cosmetic. Missions are written from two services — `MissionService` and `BidService` (which flips `PUBLISHED → BIDDING` on the first bid and sets `AWARDED` on acceptance) — so a cache owned by either would be stale as soon as the other wrote. Routing every read *and* write through one interface means the caching decorator observes all of them and invalidation cannot be forgotten at a call site.
+
+- **`findById` vs `findFresh`**: read-only flows use `findById` (may be served from cache, may return a detached copy); anything that will call `save` must use `findFresh`. `Mission` has no `@Version`, so merging a stale detached copy would write back *every* field — silently reverting `status`/`awardedPilotId`. Both `MissionService` and `BidService` keep a `getOrThrow` / `getFreshOrThrow` pair for this.
+- **Query parameters are records** (`OpenMissionQuery`), not `Specification` lambdas — a lambda has no value equality and can never be a cache key. The `Specification` is built inside `JpaMissionDataAccess`; the service keeps the domain decisions (which statuses count as open, timezone handling).
+
+### Caching — hand-written, not Spring Cache
+
+`CachingMissionDataAccess` decorates `JpaMissionDataAccess`. Deliberately no `spring-boot-starter-cache`, Caffeine or Hibernate second-level cache — the cache is implemented directly (`TtlCache`), which is what motivates the DAL in the first place.
+
+- Two caches: mission id → detached copy, and query → **ordered ids** (never entities). Storing ids keeps entity freshness in one place and makes list invalidation cheap — a write discards small id arrays while the rows survive.
+- Entities are copied in and out via `Mission`'s all-args constructor, so adding a field breaks the copy at compile time instead of silently dropping it.
+- Eviction happens immediately *and* on `afterCompletion` when a transaction is active (guarded — most writes here run outside one).
+- Configured under `app.cache.mission.*`; `enabled=false` removes the decorator bean entirely rather than short-circuiting it.
+- **Assumes a single application instance.** Two JVMs would hold divergent caches. Nothing enforces this today, though the `@Scheduled` overdue sweep already assumes it.
+
+### Parameter objects
+
+Methods with long positional parameter lists — especially adjacent same-typed parameters, which transpose silently — take a record instead (`NewNotification`, `NewBidEmail`). These records live **beside the service that consumes them**, not in `web.dto.*`: they are business-layer value objects, and putting them under `web` would make `business` depend on `web`. Where the same call is repeated across classes, named static factories on the record (`NewNotification.bidAccepted(...)`) keep the wording in one place. Controller handler signatures are exempt — their parameters carry distinct Spring binding annotations that a record cannot.
 
 ### Strict separation of concerns
 
