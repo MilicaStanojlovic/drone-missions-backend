@@ -21,13 +21,13 @@ import java.util.List;
 
 @RestController
 @AllArgsConstructor
-@RequestMapping("/api/v1")
+@RequestMapping("/api/v1/bids")
 public class BidController {
     private final BidService service;
     private final BidMapper mapper;
 
     /** Place the caller's bid on a mission, or update their pending one. */
-    @PostMapping("/missions/{missionId}/bids")
+    @PostMapping("/mission/{missionId}")
     @PreAuthorize("hasRole('PILOT')")
     public ResponseEntity<BidResponse> place(@PathVariable Long missionId,
                                              @Valid @RequestBody BidRequest request,
@@ -37,7 +37,7 @@ public class BidController {
     }
 
     /** The mission's owner sees every bid; anyone else sees only their own. */
-    @GetMapping("/missions/{missionId}/bids")
+    @GetMapping("/mission/{missionId}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<BidResponse>> listForMission(@PathVariable Long missionId,
                                                             @AuthenticationPrincipal Long userId) {
@@ -47,7 +47,7 @@ public class BidController {
     }
 
     /** Every bid the calling pilot has placed, with statuses. */
-    @GetMapping("/bids/my")
+    @GetMapping("/my")
     @PreAuthorize("hasRole('PILOT')")
     public ResponseEntity<List<BidResponse>> myBids(@AuthenticationPrincipal Long userId) {
         return ResponseEntity.ok(service.myBids(userId).stream()
@@ -56,7 +56,7 @@ public class BidController {
     }
 
     /** Withdraw (delete) the caller's pending bid. */
-    @DeleteMapping("/bids/{id}")
+    @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('PILOT')")
     public ResponseEntity<Void> withdraw(@PathVariable Long id,
                                          @AuthenticationPrincipal Long userId) {
@@ -65,7 +65,7 @@ public class BidController {
     }
 
     /** Accept one bid: rejects the rest and awards the mission to its pilot. */
-    @PostMapping("/bids/{id}/accept")
+    @PostMapping("/{id}/accept")
     @PreAuthorize("hasRole('DESIGNER')")
     public ResponseEntity<BidResponse> accept(@PathVariable Long id,
                                               @AuthenticationPrincipal Long userId) {
