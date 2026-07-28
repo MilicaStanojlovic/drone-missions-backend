@@ -34,7 +34,7 @@ public class BidService {
             Set.of(MissionStatus.PUBLISHED, MissionStatus.BIDDING);
 
     private final BidRepository bidRepository;
-    private final MissionDataAccess missionRepository;
+    private final MissionDataAccess missionDataAccess;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
     private final EmailService emailService;
@@ -76,7 +76,7 @@ public class BidService {
 
         if (mission.getStatus() == MissionStatus.PUBLISHED) {
             mission.setStatus(MissionStatus.BIDDING);
-            missionRepository.save(mission);
+            missionDataAccess.save(mission);
         }
 
         // Let the mission's owner know a bid came in (best-effort email).
@@ -159,7 +159,7 @@ public class BidService {
 
         mission.setStatus(MissionStatus.AWARDED);
         mission.setAwardedPilotId(bid.getPilotId());
-        missionRepository.save(mission);
+        missionDataAccess.save(mission);
 
         notifyDecision(mission, bid, true);
         losers.forEach(loser -> notifyDecision(mission, loser, false));
@@ -179,13 +179,13 @@ public class BidService {
 
     /** Read-only lookup — may be served from cache, so never hand the result to save(). */
     private Mission getMissionOrThrow(Long missionId) {
-        return missionRepository.findById(missionId)
+        return missionDataAccess.findById(missionId)
                 .orElseThrow(() -> new MissionNotFoundException(missionId));
     }
 
     /** Lookup for a flow that is about to modify the mission — always a live database row. */
     private Mission getFreshMissionOrThrow(Long missionId) {
-        return missionRepository.findFresh(missionId)
+        return missionDataAccess.findFresh(missionId)
                 .orElseThrow(() -> new MissionNotFoundException(missionId));
     }
 
