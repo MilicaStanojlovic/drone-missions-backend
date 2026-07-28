@@ -30,7 +30,7 @@ public class OverdueNotificationScheduler {
     private static final Set<MissionStatus> ACTIVE_AWARDED =
             Set.of(MissionStatus.AWARDED, MissionStatus.IN_PROGRESS);
 
-    private final MissionDataAccess missionRepository;
+    private final MissionDataAccess missionDataAccess;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
     private final EmailService emailService;
@@ -41,7 +41,7 @@ public class OverdueNotificationScheduler {
         ZoneId zone = ZoneId.of("Europe/Belgrade");
         Instant cutoff = LocalDate.now(zone).atStartOfDay(zone).toInstant();
 
-        List<Mission> overdue = missionRepository.findOverdue(ACTIVE_AWARDED, cutoff);
+        List<Mission> overdue = missionDataAccess.findOverdue(ACTIVE_AWARDED, cutoff);
 
         int notified = 0;
         for (Mission mission : overdue) {

@@ -17,11 +17,11 @@ import org.springframework.stereotype.Component;
 @AllArgsConstructor
 public class BidMapper {
 
-    private final MissionDataAccess missionRepository;
+    private final MissionDataAccess missionDataAccess;
     private final UserRepository userRepository;
 
     public BidResponse toResponse(Bid bid) {
-        String missionName = missionRepository.findById(bid.getMissionId())
+        String missionName = missionDataAccess.findById(bid.getMissionId())
                 .map(Mission::getName)
                 .orElse(null);
         String pilotName = userRepository.findById(bid.getPilotId())
