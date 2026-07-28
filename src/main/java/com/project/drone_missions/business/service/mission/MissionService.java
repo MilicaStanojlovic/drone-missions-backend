@@ -37,7 +37,7 @@ public class MissionService {
     private static final Set<MissionStatus> OPEN_STATUSES =
             Set.of(MissionStatus.PUBLISHED, MissionStatus.BIDDING);
 
-    private final MissionDataAccess repository;
+    private final MissionDataAccess repository; // issue1
     private final BidRepository bidRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
@@ -162,7 +162,6 @@ public class MissionService {
     public Mission findById(Long id, Long currentUserId) {
         Mission mission = getOrThrow(id);
 
-       // Long currentUserId = Long.valueOf(SecurityContextHolder.getContext().getAuthentication().getName());
         if (!isVisibleTo(mission, currentUserId)) {
             throw new MissionNotFoundException(id);
         }
@@ -187,7 +186,6 @@ public class MissionService {
     }
 
     public void delete(Long id, Long currentUserId) {
-        //Long currentUserId = Long.valueOf(SecurityContextHolder.getContext().getAuthentication().getName());
         Mission mission = getFreshOrThrow(id);
         requireOwner(mission, currentUserId);
         repository.delete(mission);

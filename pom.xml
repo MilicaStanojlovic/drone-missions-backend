@@ -70,6 +70,20 @@
 			<version>3.0.3</version>
 		</dependency>
 
+		<!-- Spring's cache abstraction (@Cacheable/@CacheEvict) plus Caffeine as its store.
+		     Used only by the "cache-spring" profile — see config.SpringCacheConfig. Caffeine
+		     rather than the default ConcurrentMapCacheManager because it supports TTL and a
+		     size bound, which the hand-written TtlCache also has: same settings on both sides
+		     keeps the two implementations comparable. -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-cache</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>com.github.ben-manes.caffeine</groupId>
+			<artifactId>caffeine</artifactId>
+		</dependency>
+
 		<dependency>
 			<groupId>org.postgresql</groupId>
 			<artifactId>postgresql</artifactId>

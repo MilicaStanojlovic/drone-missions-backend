@@ -30,8 +30,9 @@ import java.util.Optional;
  * <p>So: <strong>read-only flows use {@link #findById}; anything that will call {@link #save}
  * uses {@link #findFresh}.</strong>
  */
-public interface MissionDataAccess {
-
+public interface MissionDataAccess { // MissionDAO, @Cacheable Springova anotacija, paralelna anotacija u env varijabli koja ce
+    // sa profilima, setujemo profile u starting konfiguraciji, i env varijable i profil koji ce se koristiti
+    // hooks komentari, skripta
     /**
      * Look up a mission for a read-only flow. May be served from cache, and may therefore
      * return a detached copy rather than a managed entity.

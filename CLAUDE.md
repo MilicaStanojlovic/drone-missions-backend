@@ -73,15 +73,36 @@ That rule is load-bearing, not cosmetic. Missions are written from two services 
 - **`findById` vs `findFresh`**: read-only flows use `findById` (may be served from cache, may return a detached copy); anything that will call `save` must use `findFresh`. `Mission` has no `@Version`, so merging a stale detached copy would write back *every* field — silently reverting `status`/`awardedPilotId`. Both `MissionService` and `BidService` keep a `getOrThrow` / `getFreshOrThrow` pair for this.
 - **Query parameters are records** (`OpenMissionQuery`), not `Specification` lambdas — a lambda has no value equality and can never be a cache key. The `Specification` is built inside `JpaMissionDataAccess`; the service keeps the domain decisions (which statuses count as open, timezone handling).
 
-### Caching — hand-written, not Spring Cache
+### Caching — two implementations, chosen by profile
 
-`CachingMissionDataAccess` decorates `JpaMissionDataAccess`. Deliberately no `spring-boot-starter-cache`, Caffeine or Hibernate second-level cache — the cache is implemented directly (`TtlCache`), which is what motivates the DAL in the first place.
+Mission reads are cached by a decorator over `JpaMissionDataAccess`. There are **two** such decorators, both implementing `MissionDataAccess`, and exactly one is active:
 
-- Two caches: mission id → detached copy, and query → **ordered ids** (never entities). Storing ids keeps entity freshness in one place and makes list invalidation cheap — a write discards small id arrays while the rows survive.
-- Entities are copied in and out via `Mission`'s all-args constructor, so adding a field breaks the copy at compile time instead of silently dropping it.
+| profile | bean | config |
+|---|---|---|
+| *(none — the default)* | `CachingMissionDataAccess` — hand-written `TtlCache` | `MissionCacheConfig` (`@Profile("!cache-spring")`) |
+| `cache-spring` | `SpringCacheMissionDataAccess` — `@Cacheable`/`@CacheEvict` over Caffeine | `SpringCacheConfig` (`@Profile("cache-spring")`) |
+
+The two configs carry opposite `@Profile` expressions, so there is never a second `@Primary MissionDataAccess`. Select the profile from the **run configuration or the environment** — `-Dspring-boot.run.profiles=cache-spring`, `SPRING_PROFILES_ACTIVE=cache-spring`, or IntelliJ's *Active profiles* — not from `application.properties`, so a plain run stays on the default. Both read the same `app.cache.mission.*` settings, so they are sized identically and directly comparable; `enabled=false` removes the decorator bean entirely under either profile, which is the third mode: no cache at all.
+
+Two implementations exist on purpose. The Spring-first rule above says the framework should win where it fits; the hand-written cache predates that judgement and encodes behaviour the annotations cannot express. Keeping both runnable makes that a question you answer by running the app rather than by arguing.
+
+**Shared by both:** two caches (missions by id, and query → results); `findOverdue` is never cached; observability is a `@Scheduled` log line on `app.cache.mission.report-interval` — there is no actuator on the classpath — and both render the same fields (`hits misses ratio size evictions`) so the lines can be compared. **Both assume a single application instance**; two JVMs would hold divergent caches. Nothing enforces this, though the `@Scheduled` overdue sweep already assumes it.
+
+**`CachingMissionDataAccess` (default) — what the annotations cannot do:**
+
+- Lists cache **ordered ids**, never entities, so a write discards small id arrays while the expensive rows survive.
+- Entities are copied in and out via `Mission`'s all-args constructor, so adding a field breaks the copy at compile time instead of silently dropping it — and a caller cannot corrupt a cached entry by mutating what it was handed.
 - Eviction happens immediately *and* on `afterCompletion` when a transaction is active (guarded — most writes here run outside one).
-- Configured under `app.cache.mission.*`; `enabled=false` removes the decorator bean entirely rather than short-circuiting it.
-- **Assumes a single application instance.** Two JVMs would hold divergent caches. Nothing enforces this today, though the `@Scheduled` overdue sweep already assumes it.
+- A full cache **refuses** the new value rather than displacing an existing entry.
+
+**`SpringCacheMissionDataAccess` (`cache-spring`) — the costs of staying idiomatic.** All four are documented on the class and pinned by tests; they are the findings, not bugs to fix:
+
+- `@CacheEvict(allEntries = true)` is the only way to say "any write can change which missions a query returns", so **a write clears the entity rows too**.
+- Cached entities are **shared, not copied** — mutating a returned `Mission` in place would corrupt the entry. Safe only because every write flow uses `findFresh`, which is never served from cache.
+- **No transaction-aware eviction.** Spring's `TransactionAwareCacheDecorator` does not help: it defers to `afterCommit`, which would leave a stale entry after a rollback.
+- Bounding is **LRU eviction**, not refusal.
+
+Gotchas if you touch this: `unless = "#result == null"` — not `isEmpty()` — because Spring unwraps `Optional` before evaluating the expression; `findFresh` needs `beforeInvocation = true`; `@EnableCaching(proxyTargetClass = true)` because the `@Scheduled` reporter is not on the interface and a JDK proxy would drop it; and `setCacheNames(...)` must be called **before** `registerCustomCache(...)`, since it overwrites entries with default-configured (unbounded, TTL-less) caches.
 
 ### Parameter objects
 
