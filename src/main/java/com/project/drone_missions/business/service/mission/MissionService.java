@@ -37,14 +37,14 @@ public class MissionService {
     private static final Set<MissionStatus> OPEN_STATUSES =
             Set.of(MissionStatus.PUBLISHED, MissionStatus.BIDDING);
 
-    private final MissionDataAccess repository; // issue1
+    private final MissionDataAccess missionDataAccess;
     private final BidRepository bidRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
     private final EmailService emailService;
 
     public Mission create(Mission mission) {
-        return repository.save(mission);
+        return missionDataAccess.save(mission);
     }
 
     /**
@@ -63,7 +63,7 @@ public class MissionService {
         Instant dayStart = date == null ? null : date.atStartOfDay(zone).toInstant();
         Instant dayEndExclusive = date == null ? null : date.plusDays(1).atStartOfDay(zone).toInstant();
 
-        return repository.findOpen(
+        return missionDataAccess.findOpen(
                 new OpenMissionQuery(OPEN_STATUSES, loc, kw, dayStart, dayEndExclusive));
     }
 
@@ -74,12 +74,12 @@ public class MissionService {
 
     /** The missions the caller created and owns. */
     public List<Mission> findOwnedBy(Long currentUserId) {
-        return repository.findByUserId(currentUserId);
+        return missionDataAccess.findByUserId(currentUserId);
     }
 
     /** The missions awarded to the calling pilot (their "jobs"). */
     public List<Mission> findAwardedTo(Long pilotId) {
-        return repository.findByAwardedPilotId(pilotId);
+        return missionDataAccess.findByAwardedPilotId(pilotId);
     }
 
     /**
@@ -97,7 +97,7 @@ public class MissionService {
                     "Mission %d cannot be started from status %s".formatted(id, mission.getStatus()));
         }
         mission.setStatus(MissionStatus.IN_PROGRESS);
-        return repository.save(mission);
+        return missionDataAccess.save(mission);
     }
 
     /**
@@ -116,7 +116,7 @@ public class MissionService {
                     "Mission %d cannot be completed from status %s".formatted(id, mission.getStatus()));
         }
         mission.setStatus(MissionStatus.COMPLETED);
-        return repository.save(mission);
+        return missionDataAccess.save(mission);
     }
 
     /**
@@ -135,7 +135,7 @@ public class MissionService {
                     "Mission %d cannot be cancelled from status %s".formatted(id, mission.getStatus()));
         }
         mission.setStatus(MissionStatus.CANCELLED);
-        repository.save(mission);
+        missionDataAccess.save(mission);
 
         bidRepository.findByMissionIdOrderByCreatedAtDesc(mission.getId()).forEach(bid -> {
             if (bid.getStatus() == BidStatus.PENDING || bid.getStatus() == BidStatus.ACCEPTED) {
@@ -182,24 +182,24 @@ public class MissionService {
         mission.setGeofence(changes.getGeofence());
         // status is intentionally not modified on update — a mission's
         // lifecycle status is never changed by an edit.
-        return repository.save(mission);
+        return missionDataAccess.save(mission);
     }
 
     public void delete(Long id, Long currentUserId) {
         Mission mission = getFreshOrThrow(id);
         requireOwner(mission, currentUserId);
-        repository.delete(mission);
+        missionDataAccess.delete(mission);
     }
 
     /** Read-only lookup — may be served from cache, so never hand the result to save(). */
     private Mission getOrThrow(Long id) {
-        return repository.findById(id)
+        return missionDataAccess.findById(id)
                 .orElseThrow(() -> new MissionNotFoundException(id));
     }
 
     /** Lookup for a flow that is about to modify the mission — always a live database row. */
     private Mission getFreshOrThrow(Long id) {
-        return repository.findFresh(id)
+        return missionDataAccess.findFresh(id)
                 .orElseThrow(() -> new MissionNotFoundException(id));
     }
 
