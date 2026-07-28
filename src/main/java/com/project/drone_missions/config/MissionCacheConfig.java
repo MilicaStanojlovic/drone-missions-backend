@@ -3,12 +3,14 @@ package com.project.drone_missions.config;
 import com.project.drone_missions.data.access.CachingMissionDataAccess;
 import com.project.drone_missions.data.access.JpaMissionDataAccess;
 import com.project.drone_missions.data.access.MissionDataAccess;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
+import org.springframework.context.annotation.Profile;
 
 import java.time.Clock;
 
@@ -19,8 +21,15 @@ import java.time.Clock;
  * the decorator bean is never created, so {@link JpaMissionDataAccess} becomes the only
  * candidate and is injected directly. The disabled path therefore costs nothing at all — no
  * branch on every call, and no no-op implementation to maintain.
+ *
+ * <p>This is the default implementation: it is active unless the {@code cache-spring} profile
+ * selects the {@code @Cacheable} one instead (see {@code SpringCacheConfig}). The two configs
+ * carry opposite {@code @Profile} expressions, so exactly one {@code @Primary MissionDataAccess}
+ * exists in any context and a run with no profile set behaves as it always has.
  */
+@Slf4j
 @Configuration
+@Profile("!cache-spring")
 @EnableConfigurationProperties(MissionCacheProperties.class)
 public class MissionCacheConfig {
 
@@ -34,6 +43,11 @@ public class MissionCacheConfig {
     /**
      * Injects the concrete {@link JpaMissionDataAccess} rather than the interface: it is
      * compile-time safe, needs no qualifier string, and cannot accidentally self-inject.
+     *
+     * <p>Announces itself at startup. Both implementations boot cleanly and serve identical
+     * responses, so without this line a mistyped profile — {@code springcache} instead of
+     * {@code cache-spring}, say — silently leaves you on this one, and the only tell is the
+     * periodic reporter's prefix up to a report interval later.
      */
     @Bean
     @Primary
@@ -42,6 +56,8 @@ public class MissionCacheConfig {
     public MissionDataAccess cachingMissionDataAccess(JpaMissionDataAccess delegate,
                                                       MissionCacheProperties properties,
                                                       Clock clock) {
+        log.info("mission cache: CachingMissionDataAccess (hand-written TtlCache) ttl={} entities={} lists={}",
+                properties.ttl(), properties.maxSize(), properties.listMaxSize());
         return new CachingMissionDataAccess(delegate, properties, clock);
     }
 }

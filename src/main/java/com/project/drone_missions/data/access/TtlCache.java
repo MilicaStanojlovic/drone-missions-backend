@@ -46,7 +46,7 @@ public final class TtlCache<K, V> {
 
     private final ConcurrentHashMap<K, Entry<V>> entries = new ConcurrentHashMap<>();
     private final Clock clock;
-    private final long ttlMillis;
+    private final long ttlMillis; // Schedular
     private final int maxSize;
 
     private final LongAdder hits = new LongAdder();
@@ -128,7 +128,7 @@ public final class TtlCache<K, V> {
     public int purgeExpired() {
         long now = clock.millis();
         int removed = 0;
-        for (Iterator<Map.Entry<K, Entry<V>>> it = entries.entrySet().iterator(); it.hasNext(); ) {
+        for (Iterator<Map.Entry<K, Entry<V>>> it = entries.entrySet().iterator(); it.hasNext(); )  { // TODO stream
             Map.Entry<K, Entry<V>> e = it.next();
             if (e.getValue().isExpired(now)) {
                 it.remove();
