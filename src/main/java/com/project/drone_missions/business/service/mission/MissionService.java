@@ -57,8 +57,8 @@ public class MissionService {
      * timezone offset. Assumes the app runs in a single timezone.
      */
     public List<Mission> findOpen(String location, String keyword, LocalDate date) {
-        String loc = blankToNull(location);
-        String kw = blankToNull(keyword);
+        String loc = normalize(location);
+        String kw = normalize(keyword);
         ZoneId zone = ZoneId.systemDefault();
         Instant dayStart = date == null ? null : date.atStartOfDay(zone).toInstant();
         Instant dayEndExclusive = date == null ? null : date.plusDays(1).atStartOfDay(zone).toInstant();
@@ -67,9 +67,15 @@ public class MissionService {
                 new OpenMissionQuery(OPEN_STATUSES, loc, kw, dayStart, dayEndExclusive));
     }
 
-    /** Treat a null/blank filter value as "not provided" so the query's IS NULL guard skips it. */
-    private static String blankToNull(String value) {
-        return value == null || value.isBlank() ? null : value.trim();
+    /**
+     * Treats a null/blank filter value as "not provided" so the query's IS NULL guard skips
+     * it, and lowercases the rest. Both filters match case-insensitively at the SQL layer, so
+     * without this two requests differing only in case (e.g. "Novi Sad" vs. "novi sad") would
+     * build unequal {@link OpenMissionQuery} records and land as separate entries in the list
+     * cache despite returning identical results.
+     */
+    private static String normalize(String value) {
+        return value == null || value.isBlank() ? null : value.trim().toLowerCase();
     }
 
     /** The missions the caller created and owns. */
