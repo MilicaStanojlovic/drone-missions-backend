@@ -4,25 +4,23 @@ import com.project.drone_missions.business.exception.mission.MissionAccessDenied
 import com.project.drone_missions.business.exception.mission.MissionConflictException;
 import com.project.drone_missions.business.exception.mission.MissionNotFoundException;
 import com.project.drone_missions.business.service.mail.EmailService;
+import com.project.drone_missions.business.service.notification.NewNotification;
 import com.project.drone_missions.business.service.notification.NotificationService;
+import com.project.drone_missions.data.access.MissionDataAccess;
+import com.project.drone_missions.data.access.OpenMissionQuery;
 import com.project.drone_missions.data.model.Bid;
 import com.project.drone_missions.data.model.BidStatus;
 import com.project.drone_missions.data.model.Mission;
 import com.project.drone_missions.data.model.MissionStatus;
-import com.project.drone_missions.data.model.NotificationType;
 import com.project.drone_missions.data.repository.BidRepository;
-import com.project.drone_missions.data.repository.MissionRepository;
 import com.project.drone_missions.data.repository.UserRepository;
-import jakarta.persistence.criteria.Predicate;
 import lombok.AllArgsConstructor;
-import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -39,7 +37,7 @@ public class MissionService {
     private static final Set<MissionStatus> OPEN_STATUSES =
             Set.of(MissionStatus.PUBLISHED, MissionStatus.BIDDING);
 
-    private final MissionRepository repository;
+    private final MissionDataAccess repository; // issue1
     private final BidRepository bidRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
@@ -65,27 +63,8 @@ public class MissionService {
         Instant dayStart = date == null ? null : date.atStartOfDay(zone).toInstant();
         Instant dayEndExclusive = date == null ? null : date.plusDays(1).atStartOfDay(zone).toInstant();
 
-        Specification<Mission> spec = (root, query, cb) -> {
-            List<Predicate> predicates = new ArrayList<>();
-            predicates.add(root.get("status").in(OPEN_STATUSES));
-            if (loc != null) {
-                predicates.add(cb.like(cb.lower(root.<String>get("location")), "%" + loc.toLowerCase() + "%"));
-            }
-            if (kw != null) {
-                String pattern = "%" + kw.toLowerCase() + "%";
-                predicates.add(cb.or(
-                        cb.like(cb.lower(root.<String>get("description")), pattern),
-                        cb.like(cb.lower(root.<String>get("name")), pattern)));
-            }
-            if (dayStart != null) {
-                predicates.add(cb.and(
-                        cb.lessThan(root.<Instant>get("startTime"), dayEndExclusive),
-                        cb.greaterThanOrEqualTo(root.<Instant>get("endTime"), dayStart)));
-            }
-            query.orderBy(cb.desc(root.get("createdAt")));
-            return cb.and(predicates.toArray(new Predicate[0]));
-        };
-        return repository.findAll(spec);
+        return repository.findOpen(
+                new OpenMissionQuery(OPEN_STATUSES, loc, kw, dayStart, dayEndExclusive));
     }
 
     /** Treat a null/blank filter value as "not provided" so the query's IS NULL guard skips it. */
@@ -109,7 +88,7 @@ public class MissionService {
      * deliberate action — a mission never advances on its own.
      */
     public Mission start(Long id, Long pilotId) {
-        Mission mission = getOrThrow(id);
+        Mission mission = getFreshOrThrow(id);
         if (!pilotId.equals(mission.getAwardedPilotId())) {
             throw new MissionAccessDeniedException(id);
         }
@@ -128,7 +107,7 @@ public class MissionService {
      * completed again.
      */
     public Mission complete(Long id, Long pilotId) {
-        Mission mission = getOrThrow(id);
+        Mission mission = getFreshOrThrow(id);
         if (!pilotId.equals(mission.getAwardedPilotId())) {
             throw new MissionAccessDeniedException(id);
         }
@@ -148,7 +127,7 @@ public class MissionService {
      */
     @Transactional
     public Mission cancel(Long id, Long designerId) {
-        Mission mission = getOrThrow(id);
+        Mission mission = getFreshOrThrow(id);
         requireOwner(mission, designerId);
         if (mission.getStatus() == MissionStatus.COMPLETED
                 || mission.getStatus() == MissionStatus.CANCELLED) {
@@ -167,10 +146,7 @@ public class MissionService {
 
         Long pilotId = mission.getAwardedPilotId();
         if (pilotId != null) {
-            notificationService.create(pilotId, NotificationType.MISSION_CANCELLED,
-                    "Mission cancelled",
-                    "\"%s\" was cancelled by the designer.".formatted(mission.getName()),
-                    mission.getId());
+            notificationService.create(NewNotification.missionCancelled(pilotId, mission));
             userRepository.findById(pilotId)
                     .ifPresent(pilot -> emailService.sendMissionCancelled(pilot, mission));
         }
@@ -186,7 +162,6 @@ public class MissionService {
     public Mission findById(Long id, Long currentUserId) {
         Mission mission = getOrThrow(id);
 
-       // Long currentUserId = Long.valueOf(SecurityContextHolder.getContext().getAuthentication().getName());
         if (!isVisibleTo(mission, currentUserId)) {
             throw new MissionNotFoundException(id);
         }
@@ -194,7 +169,7 @@ public class MissionService {
     }
 
     public Mission update(Long id, Mission changes, Long currentUserId) {
-        Mission mission = getOrThrow(id);
+        Mission mission = getFreshOrThrow(id);
 
         requireOwner(mission, currentUserId);
         mission.setName(changes.getName());
@@ -211,14 +186,20 @@ public class MissionService {
     }
 
     public void delete(Long id, Long currentUserId) {
-        //Long currentUserId = Long.valueOf(SecurityContextHolder.getContext().getAuthentication().getName());
-        Mission mission = getOrThrow(id);
+        Mission mission = getFreshOrThrow(id);
         requireOwner(mission, currentUserId);
         repository.delete(mission);
     }
 
+    /** Read-only lookup — may be served from cache, so never hand the result to save(). */
     private Mission getOrThrow(Long id) {
         return repository.findById(id)
+                .orElseThrow(() -> new MissionNotFoundException(id));
+    }
+
+    /** Lookup for a flow that is about to modify the mission — always a live database row. */
+    private Mission getFreshOrThrow(Long id) {
+        return repository.findFresh(id)
                 .orElseThrow(() -> new MissionNotFoundException(id));
     }
 

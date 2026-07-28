@@ -5,15 +5,16 @@ import com.project.drone_missions.business.exception.bid.BidNotFoundException;
 import com.project.drone_missions.business.exception.mission.MissionAccessDeniedException;
 import com.project.drone_missions.business.exception.mission.MissionNotFoundException;
 import com.project.drone_missions.business.service.mail.EmailService;
+import com.project.drone_missions.business.service.mail.NewBidEmail;
+import com.project.drone_missions.business.service.notification.NewNotification;
 import com.project.drone_missions.business.service.notification.NotificationService;
 import com.project.drone_missions.data.model.Bid;
 import com.project.drone_missions.data.model.BidStatus;
 import com.project.drone_missions.data.model.Mission;
 import com.project.drone_missions.data.model.MissionStatus;
-import com.project.drone_missions.data.model.NotificationType;
 import com.project.drone_missions.data.model.User;
+import com.project.drone_missions.data.access.MissionDataAccess;
 import com.project.drone_missions.data.repository.BidRepository;
-import com.project.drone_missions.data.repository.MissionRepository;
 import com.project.drone_missions.data.repository.UserRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -33,7 +34,7 @@ public class BidService {
             Set.of(MissionStatus.PUBLISHED, MissionStatus.BIDDING);
 
     private final BidRepository bidRepository;
-    private final MissionRepository missionRepository;
+    private final MissionDataAccess missionRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
     private final EmailService emailService;
@@ -44,7 +45,8 @@ public class BidService {
      * mission flips it to BIDDING so the lifecycle reflects real activity.
      */
     public Bid place(Long missionId, Long pilotId, BigDecimal amount, String message) {
-        Mission mission = getMissionOrThrow(missionId);
+        // Fresh, not cached: the first bid on a PUBLISHED mission writes it back as BIDDING.
+        Mission mission = getFreshMissionOrThrow(missionId);
         if (!BIDDABLE_STATUSES.contains(mission.getStatus())) {
             throw new BidConflictException(
                     "Mission %d is not open for bidding".formatted(missionId));
@@ -81,7 +83,7 @@ public class BidService {
         User designer = userRepository.findById(mission.getUserId()).orElse(null);
         String pilotName = userRepository.findById(pilotId).map(User::getUsername).orElse("A pilot");
         if (designer != null) {
-            emailService.sendNewBid(designer, mission, pilotName, amount, message);
+            emailService.sendNewBid(new NewBidEmail(designer, mission, pilotName, amount, message));
         }
         return saved;
     }
@@ -131,7 +133,8 @@ public class BidService {
     @Transactional
     public Bid accept(Long bidId, Long designerId) {
         Bid bid = getBidOrThrow(bidId);
-        Mission mission = getMissionOrThrow(bid.getMissionId());
+        // Fresh, not cached: this awards the mission and writes it back.
+        Mission mission = getFreshMissionOrThrow(bid.getMissionId());
         if (!designerId.equals(mission.getUserId())) {
             throw new MissionAccessDeniedException(mission.getId());
         }
@@ -166,22 +169,23 @@ public class BidService {
     /** In-app notification + best-effort email to a pilot whose bid was decided. */
     private void notifyDecision(Mission mission, Bid bid, boolean accepted) {
         if (accepted) {
-            notificationService.create(bid.getPilotId(), NotificationType.BID_ACCEPTED,
-                    "Bid accepted",
-                    "Your bid on \"%s\" was accepted — the mission is yours.".formatted(mission.getName()),
-                    mission.getId());
+            notificationService.create(NewNotification.bidAccepted(bid.getPilotId(), mission));
         } else {
-            notificationService.create(bid.getPilotId(), NotificationType.BID_REJECTED,
-                    "Bid not selected",
-                    "Your bid on \"%s\" wasn't selected.".formatted(mission.getName()),
-                    mission.getId());
+            notificationService.create(NewNotification.bidRejected(bid.getPilotId(), mission));
         }
         userRepository.findById(bid.getPilotId())
                 .ifPresent(pilot -> emailService.sendBidDecision(pilot, mission, bid.getAmount(), accepted));
     }
 
+    /** Read-only lookup — may be served from cache, so never hand the result to save(). */
     private Mission getMissionOrThrow(Long missionId) {
         return missionRepository.findById(missionId)
+                .orElseThrow(() -> new MissionNotFoundException(missionId));
+    }
+
+    /** Lookup for a flow that is about to modify the mission — always a live database row. */
+    private Mission getFreshMissionOrThrow(Long missionId) {
+        return missionRepository.findFresh(missionId)
                 .orElseThrow(() -> new MissionNotFoundException(missionId));
     }
 

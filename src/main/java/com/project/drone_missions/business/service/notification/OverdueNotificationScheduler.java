@@ -2,9 +2,8 @@ package com.project.drone_missions.business.service.notification;
 
 import com.project.drone_missions.business.service.mail.EmailService;
 import com.project.drone_missions.data.model.Mission;
+import com.project.drone_missions.data.access.MissionDataAccess;
 import com.project.drone_missions.data.model.MissionStatus;
-import com.project.drone_missions.data.model.NotificationType;
-import com.project.drone_missions.data.repository.MissionRepository;
 import com.project.drone_missions.data.repository.UserRepository;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,7 +30,7 @@ public class OverdueNotificationScheduler {
     private static final Set<MissionStatus> ACTIVE_AWARDED =
             Set.of(MissionStatus.AWARDED, MissionStatus.IN_PROGRESS);
 
-    private final MissionRepository missionRepository;
+    private final MissionDataAccess missionRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
     private final EmailService emailService;
@@ -42,8 +41,7 @@ public class OverdueNotificationScheduler {
         ZoneId zone = ZoneId.of("Europe/Belgrade");
         Instant cutoff = LocalDate.now(zone).atStartOfDay(zone).toInstant();
 
-        List<Mission> overdue = missionRepository
-                .findByAwardedPilotIdIsNotNullAndStatusInAndEndTimeBefore(ACTIVE_AWARDED, cutoff);
+        List<Mission> overdue = missionRepository.findOverdue(ACTIVE_AWARDED, cutoff);
 
         int notified = 0;
         for (Mission mission : overdue) {
@@ -51,11 +49,7 @@ public class OverdueNotificationScheduler {
             if (notificationService.overdueExists(pilotId, mission.getId())) {
                 continue;
             }
-            notificationService.create(pilotId, NotificationType.MISSION_OVERDUE,
-                    "Has your flight ended?",
-                    "\"%s\" has passed its end date. Mark it finished if the flight is done."
-                            .formatted(mission.getName()),
-                    mission.getId());
+            notificationService.create(NewNotification.missionOverdue(pilotId, mission));
             userRepository.findById(pilotId)
                     .ifPresent(pilot -> emailService.sendMissionOverdue(pilot, mission));
             notified++;
