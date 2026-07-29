@@ -5,6 +5,7 @@ import com.project.drone_missions.business.service.rating.RatingService;
 import com.project.drone_missions.business.service.rating.RatingSummary;
 import com.project.drone_missions.data.model.Mission;
 import com.project.drone_missions.data.model.MissionStatus;
+import com.project.drone_missions.data.model.User;
 import com.project.drone_missions.web.mapper.mission.MissionMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -49,11 +50,17 @@ class MissionControllerTest {
         when(ratingService.summaryFor(any())).thenReturn(RatingSummary.NONE);
     }
 
+    private static User user(Long id) {
+        User u = new User();
+        u.setId(id);
+        return u;
+    }
+
     private Mission legacyMission() {
         Mission mission = new Mission();
         mission.setId(1L);
         mission.setStatus(MissionStatus.PUBLISHED);
-        mission.setUserId(null);
+        mission.setDesigner(null);
         return mission;
     }
 
@@ -74,7 +81,7 @@ class MissionControllerTest {
     @Test
     void ownedMissionsAreStillReturnedForARealOwner() {
         Mission owned = legacyMission();
-        owned.setUserId(7L);
+        owned.setDesigner(user(7L));
         when(service.findOwnedBy(7L)).thenReturn(List.of(owned));
 
         assertThat(controller.findMine(7L).getBody()).hasSize(1);

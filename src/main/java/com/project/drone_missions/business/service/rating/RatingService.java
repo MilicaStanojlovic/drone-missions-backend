@@ -93,17 +93,17 @@ public class RatingService {
     }
 
     private Long counterpartOf(Mission mission, Long raterId) {
-        if (raterId.equals(mission.getUserId()) && mission.getAwardedPilotId() != null) {
+        if (raterId.equals(mission.getDesignerId()) && mission.getAwardedPilotId() != null) {
             return mission.getAwardedPilotId();
         }
         if (raterId.equals(mission.getAwardedPilotId())) {
-            return mission.getUserId();
+            return mission.getDesignerId();
         }
         throw new NotMissionParticipantException(mission.getId());
     }
 
     private void requireParticipant(Mission mission, Long callerId) {
-        if (!callerId.equals(mission.getUserId()) && !callerId.equals(mission.getAwardedPilotId())) {
+        if (!callerId.equals(mission.getDesignerId()) && !callerId.equals(mission.getAwardedPilotId())) {
             throw new NotMissionParticipantException(mission.getId());
         }
     }

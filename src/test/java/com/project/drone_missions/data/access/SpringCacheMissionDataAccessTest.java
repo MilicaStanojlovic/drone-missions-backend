@@ -4,6 +4,7 @@ import com.project.drone_missions.config.SpringCacheConfig;
 import com.project.drone_missions.data.model.GeoPoint;
 import com.project.drone_missions.data.model.Mission;
 import com.project.drone_missions.data.model.MissionStatus;
+import com.project.drone_missions.data.model.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -81,9 +82,15 @@ class SpringCacheMissionDataAccessTest {
                 Objects.requireNonNull(cacheManager.getCache(name)).clear());
     }
 
+    private static User user(Long id) {
+        User u = new User();
+        u.setId(id);
+        return u;
+    }
+
     private static Mission mission(Long id) {
         return new Mission(id, "Survey", "desc", MissionStatus.PUBLISHED,
-                7L, null,
+                user(7L), null,
                 Instant.parse("2026-02-01T10:00:00Z"), Instant.parse("2026-02-01T12:00:00Z"),
                 "Novi Sad", null,
                 new ArrayList<>(List.of(new GeoPoint(45.0, 19.0))), null,

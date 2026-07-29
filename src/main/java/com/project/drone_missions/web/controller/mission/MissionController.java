@@ -40,9 +40,9 @@ public class MissionController {
     /** One aggregate query for the whole page, so cards never cost a rating lookup each. */
     private List<MissionResponse> toResponses(List<Mission> missions) {
         Map<Long, RatingSummary> ratings = ratingService.summariesFor( // TODO refactor
-                missions.stream().map(Mission::getUserId).toList());
+                missions.stream().map(Mission::getDesignerId).toList());
         return missions.stream()
-                .map(m -> mapper.toResponse(m, ratingOf(ratings, m.getUserId())))
+                .map(m -> mapper.toResponse(m, ratingOf(ratings, m.getDesignerId())))
                 .toList();
     }
 
@@ -55,7 +55,7 @@ public class MissionController {
     } // TODO RatingMapper
 
     private MissionResponse toResponse(Mission mission) {
-        return mapper.toResponse(mission, ratingService.summaryFor(mission.getUserId()));
+        return mapper.toResponse(mission, ratingService.summaryFor(mission.getDesignerId()));
     }
 
     @PostMapping
@@ -63,8 +63,7 @@ public class MissionController {
     public ResponseEntity<MissionResponse> create(@Valid @RequestBody MissionRequest request,
                                                   @AuthenticationPrincipal Long userId) {
         Mission mission = mapper.toEntity(request);
-        mission.setUserId(userId);
-        Mission created = service.create(mission);
+        Mission created = service.create(mission, userId);
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
                 .path("/{id}")
                 .buildAndExpand(created.getId())
