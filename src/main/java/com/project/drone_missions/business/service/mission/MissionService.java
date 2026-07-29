@@ -43,7 +43,9 @@ public class MissionService {
     private final NotificationService notificationService;
     private final EmailService emailService;
 
-    public Mission create(Mission mission) {
+    /** Ownership is set here, not in the controller, which has no business holding a repository. */
+    public Mission create(Mission mission, Long designerId) {
+        mission.setDesigner(userRepository.getReferenceById(designerId));
         return missionDataAccess.save(mission);
     }
 
@@ -205,14 +207,14 @@ public class MissionService {
 
     /** Visible to its owner, to the awarded pilot, or to anyone once it is open for work. */
     private boolean isVisibleTo(Mission mission, Long currentUserId) {
-        return currentUserId.equals(mission.getUserId())
+        return currentUserId.equals(mission.getDesignerId())
                 || currentUserId.equals(mission.getAwardedPilotId())
                 || OPEN_STATUSES.contains(mission.getStatus());
     }
 
     /** Only the mission's creator may modify or delete it. */
     private void requireOwner(Mission mission, Long currentUserId) {
-        if (!currentUserId.equals(mission.getUserId())) {
+        if (!currentUserId.equals(mission.getDesignerId())) {
             throw new MissionAccessDeniedException(mission.getId());
         }
     }

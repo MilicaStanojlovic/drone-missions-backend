@@ -13,12 +13,12 @@ import java.util.List;
 @Repository
 public interface MissionRepository extends JpaRepository<Mission, Long>, JpaSpecificationExecutor<Mission> {
 
-    List<Mission> findByUserId(Long userId);
+    List<Mission> findByDesigner_Id(Long userId);
 
-    List<Mission> findByAwardedPilotId(Long awardedPilotId);
+    List<Mission> findByAwardedPilot_Id(Long awardedPilotId);
 
     /** Awarded missions whose flight window has ended — the overdue scheduler's candidates. */
-    List<Mission> findByAwardedPilotIdIsNotNullAndStatusInAndEndTimeBefore(
+    List<Mission> findByAwardedPilot_IdIsNotNullAndStatusInAndEndTimeBefore(
             Collection<MissionStatus> statuses, Instant endTime);
 
     // The open-feed search is built dynamically as a Specification in JpaMissionDataAccess, so only

@@ -7,6 +7,8 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -42,14 +44,18 @@ public class Mission { // TODO Base Entity with id, createdAt, updatedAt with in
 
     // Id of the user who created and owns this mission. Nullable for legacy
     // missions created before authentication existed; always set for new ones.
-    private Long userId;
+    @ManyToOne
+    @JoinColumn(name = "user_id")
+    private User designer;
 
     // Id of the pilot whose bid was accepted. Null until the mission is awarded;
     // set (with status → AWARDED) when the designer accepts a bid.
 
     // TODO Primeni Hibernate anotacije, pogledati entitete, plan, zameni id-eve do drugih entiteta sa actual entitetima, pomoc za relacije pogledati u migracijama
 
-    private Long awardedPilotId;
+    @ManyToOne
+    @JoinColumn(name = "awarded_pilot_id")
+    private User awardedPilot;
 
     private Instant startTime;
 
@@ -77,4 +83,16 @@ public class Mission { // TODO Base Entity with id, createdAt, updatedAt with in
 
     @UpdateTimestamp
     private Instant updatedAt;
+
+    /**
+     * Both sides are nullable — an ownerless legacy row, and an unawarded mission — so the
+     * null check lives here rather than at every caller that only wants to compare ids.
+     */
+    public Long getDesignerId() {
+        return designer == null ? null : designer.getId();
+    }
+
+    public Long getAwardedPilotId() {
+        return awardedPilot == null ? null : awardedPilot.getId();
+    }
 }

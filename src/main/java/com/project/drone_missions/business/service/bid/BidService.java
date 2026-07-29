@@ -80,7 +80,7 @@ public class BidService {
         }
 
         // Let the mission's owner know a bid came in (best-effort email).
-        User designer = userRepository.findById(mission.getUserId()).orElse(null);
+        User designer = mission.getDesigner();
         String pilotName = userRepository.findById(pilotId).map(User::getUsername).orElse("A pilot");
         if (designer != null) {
             emailService.sendNewBid(new NewBidEmail(designer, mission, pilotName, amount, message));
@@ -95,7 +95,7 @@ public class BidService {
      */
     public List<Bid> listForMission(Long missionId, Long currentUserId) {
         Mission mission = getMissionOrThrow(missionId);
-        if (currentUserId.equals(mission.getUserId())) {
+        if (currentUserId.equals(mission.getDesignerId())) {
             return bidRepository.findByMission_IdOrderByCreatedAtDesc(missionId);
         }
         return bidRepository.findByMission_IdAndPilot_Id(missionId, currentUserId)
@@ -135,7 +135,7 @@ public class BidService {
         Bid bid = getBidOrThrow(bidId);
         // Fresh, not cached: this awards the mission and writes it back.
         Mission mission = getFreshMissionOrThrow(bid.getMission().getId());
-        if (!designerId.equals(mission.getUserId())) {
+        if (!designerId.equals(mission.getDesignerId())) {
             throw new MissionAccessDeniedException(mission.getId());
         }
         if (!BIDDABLE_STATUSES.contains(mission.getStatus())) {
@@ -158,7 +158,7 @@ public class BidService {
         });
 
         mission.setStatus(MissionStatus.AWARDED);
-        mission.setAwardedPilotId(bid.getPilot().getId());
+        mission.setAwardedPilot(bid.getPilot());
         missionDataAccess.save(mission);
 
         notifyDecision(mission, bid, true);

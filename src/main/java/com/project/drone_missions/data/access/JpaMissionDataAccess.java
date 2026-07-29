@@ -69,17 +69,17 @@ public class JpaMissionDataAccess implements MissionDataAccess {
 
     @Override
     public List<Mission> findByUserId(Long userId) {
-        return repository.findByUserId(userId);
+        return repository.findByDesigner_Id(userId);
     }
 
     @Override
     public List<Mission> findByAwardedPilotId(Long pilotId) {
-        return repository.findByAwardedPilotId(pilotId);
+        return repository.findByAwardedPilot_Id(pilotId);
     }
 
     @Override
     public List<Mission> findOverdue(Collection<MissionStatus> statuses, Instant endedBefore) {
-        return repository.findByAwardedPilotIdIsNotNullAndStatusInAndEndTimeBefore(statuses, endedBefore);
+        return repository.findByAwardedPilot_IdIsNotNullAndStatusInAndEndTimeBefore(statuses, endedBefore);
     }
 
     @Override

@@ -70,8 +70,8 @@ class RatingServiceTest {
         Mission mission = new Mission();
         mission.setId(MISSION_ID);
         mission.setStatus(status);
-        mission.setUserId(DESIGNER_ID);
-        mission.setAwardedPilotId(PILOT_ID);
+        mission.setDesigner(user(DESIGNER_ID));
+        mission.setAwardedPilot(user(PILOT_ID));
         return mission;
     }
 
@@ -170,7 +170,7 @@ class RatingServiceTest {
     @Test
     void designerCannotRateWhenNoPilotWasAwarded() {
         Mission mission = completedMission();
-        mission.setAwardedPilotId(null);
+        mission.setAwardedPilot(null);
         givenMission(mission);
 
         assertThatThrownBy(() -> service.create(MISSION_ID, DESIGNER_ID, (short) 5, null))
