@@ -9,6 +9,7 @@ import com.project.drone_missions.data.model.Mission;
 import com.project.drone_missions.data.model.MissionStatus;
 import com.project.drone_missions.data.model.Rating;
 import com.project.drone_missions.data.repository.RatingRepository;
+import com.project.drone_missions.data.repository.UserRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -25,6 +26,7 @@ public class RatingService {
 
     private final RatingRepository ratingRepository;
     private final MissionDataAccess missionDataAccess;
+    private final UserRepository userRepository;
 
     /**
      * The mission row is the only membership record there is, so it answers both "may this
@@ -38,14 +40,15 @@ public class RatingService {
         if (mission.getStatus() != MissionStatus.COMPLETED) {
             throw new RatingNotYetAllowedException(missionId, mission.getStatus());
         }
-        if (ratingRepository.existsByMissionIdAndRaterId(missionId, raterId)) {
+        if (ratingRepository.existsByMission_IdAndRater_Id(missionId, raterId)) {
             throw new AlreadyRatedException(missionId);
         }
 
         Rating rating = new Rating();
-        rating.setMissionId(missionId);
-        rating.setRaterId(raterId);
-        rating.setRateeId(counterpartOf(mission, raterId));
+        rating.setMission(mission);
+        // getReferenceById: setting an FK needs a reference, not a loaded row.
+        rating.setRater(userRepository.getReferenceById(raterId));
+        rating.setRatee(userRepository.getReferenceById(counterpartOf(mission, raterId)));
         rating.setScore(score);
         rating.setComment(comment);
         return ratingRepository.save(rating);
@@ -56,11 +59,11 @@ public class RatingService {
         Mission mission = missionDataAccess.findById(missionId)
                 .orElseThrow(() -> new MissionNotFoundException(missionId));
         requireParticipant(mission, callerId);
-        return ratingRepository.findByMissionIdOrderByCreatedAtDesc(missionId);
+        return ratingRepository.findByMission_IdOrderByCreatedAtDesc(missionId);
     }
 
     public List<Rating> receivedBy(Long userId) {
-        return ratingRepository.findByRateeIdOrderByCreatedAtDesc(userId);
+        return ratingRepository.findByRatee_IdOrderByCreatedAtDesc(userId);
     }
 
     /** Null is a legitimate owner id — mission.user_id is nullable for pre-auth rows. */

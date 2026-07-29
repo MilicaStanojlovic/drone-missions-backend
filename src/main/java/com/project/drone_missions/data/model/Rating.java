@@ -24,17 +24,21 @@ public class Rating {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
-    private Long missionId;
+    // @ManyToOne, not @OneToOne: a mission carries two ratings, one per side.
+    @ManyToOne
+    @JoinColumn(name = "mission_id", nullable = false)
+    private Mission mission;
 
 //    @OneToOne
 //    private Mission mission;
 
-    @Column(nullable = false)
-    private Long raterId;
+    @ManyToOne
+    @JoinColumn(name = "rater_id", nullable = false)
+    private User rater;
 
-    @Column(nullable = false)
-    private Long rateeId;
+    @ManyToOne
+    @JoinColumn(name = "ratee_id", nullable = false)
+    private User ratee;
 
     @Column(nullable = false)
     private Short score;
