@@ -46,6 +46,9 @@ public class Mission { // TODO Base Entity with id, createdAt, updatedAt with in
 
     // Id of the pilot whose bid was accepted. Null until the mission is awarded;
     // set (with status → AWARDED) when the designer accepts a bid.
+
+    // TODO Hibernate anotacije, pogledati entitete, plan, zameni id-eve do drugih entiteta sa actual entitetima, pomoc za relacije -> migracije
+
     private Long awardedPilotId;
 
     private Instant startTime;

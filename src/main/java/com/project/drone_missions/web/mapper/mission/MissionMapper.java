@@ -1,5 +1,6 @@
 package com.project.drone_missions.web.mapper.mission;
 
+import com.project.drone_missions.business.service.rating.RatingSummary;
 import com.project.drone_missions.web.dto.mission.MissionRequest;
 import com.project.drone_missions.web.dto.mission.MissionResponse;
 import com.project.drone_missions.data.model.Mission;
@@ -30,17 +31,22 @@ public class MissionMapper {
         return mission;
     }
 
-    public MissionResponse toResponse(Mission mission) {
-        String designerEmail = userRepository.findById(mission.getUserId())
-                .map(User::getEmail)
-                .orElse(null);
+    /**
+     * The caller supplies the designer's rating rather than the mapper fetching it, so a list
+     * of missions costs one aggregate query instead of one per row.
+     */
+    public MissionResponse toResponse(Mission mission, RatingSummary designerRating) {
+        User designer = userRepository.findById(mission.getUserId()).orElse(null);
         return new MissionResponse(
                 mission.getId(),
                 mission.getName(),
                 mission.getDescription(),
                 mission.getStatus(),
                 mission.getUserId(),
-                designerEmail,
+                designer == null ? null : designer.getEmail(),
+                designer == null ? null : designer.getUsername(),
+                designerRating.average(),
+                designerRating.count(),
                 mission.getAwardedPilotId(),
                 mission.getStartTime(),
                 mission.getEndTime(),
