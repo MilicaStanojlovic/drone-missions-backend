@@ -10,21 +10,23 @@ import java.util.List;
 
 public interface RatingRepository extends JpaRepository<Rating, Long> {
 
-    boolean existsByMissionIdAndRaterId(Long missionId, Long raterId);
+    boolean existsByMission_IdAndRater_Id(Long missionId, Long raterId);
 
-    List<Rating> findByRateeIdOrderByCreatedAtDesc(Long rateeId);
+    List<Rating> findByRatee_IdOrderByCreatedAtDesc(Long rateeId);
 
-    List<Rating> findByMissionIdOrderByCreatedAtDesc(Long missionId);
+    List<Rating> findByMission_IdOrderByCreatedAtDesc(Long missionId);
 
     /**
      * One query for a whole page of missions, so feed cards never cost a lookup per card.
      * Users with no ratings are absent from the result rather than returned as zero.
+     *
+     * <p>Reads the id off the relation, so it still groups on ratee_id without loading users.
      */
     @Query("""
-            select r.rateeId as rateeId, avg(r.score) as average, count(r) as total
+            select r.ratee.id as rateeId, avg(r.score) as average, count(r) as total
             from Rating r
-            where r.rateeId in :rateeIds
-            group by r.rateeId
+            where r.ratee.id in :rateeIds
+            group by r.ratee.id
             """)
     List<RateeSummary> summariesFor(@Param("rateeIds") Collection<Long> rateeIds);
 

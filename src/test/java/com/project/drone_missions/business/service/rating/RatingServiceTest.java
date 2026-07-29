@@ -8,7 +8,9 @@ import com.project.drone_missions.data.access.MissionDataAccess;
 import com.project.drone_missions.data.model.Mission;
 import com.project.drone_missions.data.model.MissionStatus;
 import com.project.drone_missions.data.model.Rating;
+import com.project.drone_missions.data.model.User;
 import com.project.drone_missions.data.repository.RatingRepository;
+import com.project.drone_missions.data.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -23,6 +25,7 @@ import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -41,11 +44,22 @@ class RatingServiceTest {
     @Mock
     private MissionDataAccess missionDataAccess;
 
+    @Mock
+    private UserRepository userRepository;
+
     private RatingService service;
 
     @BeforeEach
     void setUp() {
-        service = new RatingService(ratingRepository, missionDataAccess);
+        service = new RatingService(ratingRepository, missionDataAccess, userRepository);
+        lenient().when(userRepository.getReferenceById(any(Long.class)))
+                .thenAnswer(i -> user(i.getArgument(0)));
+    }
+
+    private static User user(Long id) {
+        User u = new User();
+        u.setId(id);
+        return u;
     }
 
     private Mission completedMission() {
@@ -98,8 +112,8 @@ class RatingServiceTest {
         service.create(MISSION_ID, DESIGNER_ID, (short) 5, "great flying");
 
         Rating saved = captureSaved();
-        assertThat(saved.getRaterId()).isEqualTo(DESIGNER_ID);
-        assertThat(saved.getRateeId()).isEqualTo(PILOT_ID);
+        assertThat(saved.getRater().getId()).isEqualTo(DESIGNER_ID);
+        assertThat(saved.getRatee().getId()).isEqualTo(PILOT_ID);
         assertThat(saved.getScore()).isEqualTo((short) 5);
         assertThat(saved.getComment()).isEqualTo("great flying");
     }
@@ -112,8 +126,8 @@ class RatingServiceTest {
         service.create(MISSION_ID, PILOT_ID, (short) 4, null);
 
         Rating saved = captureSaved();
-        assertThat(saved.getRaterId()).isEqualTo(PILOT_ID);
-        assertThat(saved.getRateeId()).isEqualTo(DESIGNER_ID);
+        assertThat(saved.getRater().getId()).isEqualTo(PILOT_ID);
+        assertThat(saved.getRatee().getId()).isEqualTo(DESIGNER_ID);
     }
 
     @Test
@@ -137,7 +151,7 @@ class RatingServiceTest {
     @Test
     void ratingTwiceIsRejected() {
         givenMission(completedMission());
-        when(ratingRepository.existsByMissionIdAndRaterId(MISSION_ID, PILOT_ID)).thenReturn(true);
+        when(ratingRepository.existsByMission_IdAndRater_Id(MISSION_ID, PILOT_ID)).thenReturn(true);
 
         assertThatThrownBy(() -> service.create(MISSION_ID, PILOT_ID, (short) 5, null))
                 .isInstanceOf(AlreadyRatedException.class);
