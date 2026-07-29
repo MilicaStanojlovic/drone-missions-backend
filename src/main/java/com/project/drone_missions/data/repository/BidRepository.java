@@ -11,11 +11,11 @@ import java.util.Optional;
 @Repository
 public interface BidRepository extends JpaRepository<Bid, Long> {
 
-    Optional<Bid> findByMissionIdAndPilotId(Long missionId, Long pilotId);
+    Optional<Bid> findByMission_IdAndPilot_Id(Long missionId, Long pilotId);
 
-    List<Bid> findByMissionIdOrderByCreatedAtDesc(Long missionId);
+    List<Bid> findByMission_IdOrderByCreatedAtDesc(Long missionId);
 
-    List<Bid> findByPilotIdOrderByCreatedAtDesc(Long pilotId);
+    List<Bid> findByPilot_IdOrderByCreatedAtDesc(Long pilotId);
 
-    List<Bid> findByMissionIdAndStatus(Long missionId, BidStatus status);
+    List<Bid> findByMission_IdAndStatus(Long missionId, BidStatus status);
 }

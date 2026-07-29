@@ -58,11 +58,11 @@ public class BidService {
                     "The bidding deadline for mission %d has passed".formatted(missionId));
         }
 
-        Bid bid = bidRepository.findByMissionIdAndPilotId(missionId, pilotId)
+        Bid bid = bidRepository.findByMission_IdAndPilot_Id(missionId, pilotId)
                 .orElseGet(() -> {
                     Bid fresh = new Bid();
-                    fresh.setMissionId(missionId);
-                    fresh.setPilotId(pilotId);
+                    fresh.setMission(mission);
+                    fresh.setPilot(userRepository.getReferenceById(pilotId));
                     fresh.setStatus(BidStatus.PENDING);
                     return fresh;
                 });
@@ -96,16 +96,16 @@ public class BidService {
     public List<Bid> listForMission(Long missionId, Long currentUserId) {
         Mission mission = getMissionOrThrow(missionId);
         if (currentUserId.equals(mission.getUserId())) {
-            return bidRepository.findByMissionIdOrderByCreatedAtDesc(missionId);
+            return bidRepository.findByMission_IdOrderByCreatedAtDesc(missionId);
         }
-        return bidRepository.findByMissionIdAndPilotId(missionId, currentUserId)
+        return bidRepository.findByMission_IdAndPilot_Id(missionId, currentUserId)
                 .map(List::of)
                 .orElseGet(List::of);
     }
 
     /** Every bid the caller has placed, newest first. */
     public List<Bid> myBids(Long pilotId) {
-        return bidRepository.findByPilotIdOrderByCreatedAtDesc(pilotId);
+        return bidRepository.findByPilot_IdOrderByCreatedAtDesc(pilotId);
     }
 
     /**
@@ -115,7 +115,7 @@ public class BidService {
      */
     public void withdraw(Long bidId, Long pilotId) {
         Bid bid = getBidOrThrow(bidId);
-        if (!pilotId.equals(bid.getPilotId())) {
+        if (!pilotId.equals(bid.getPilot().getId())) {
             throw new BidNotFoundException(bidId);
         }
         if (bid.getStatus() != BidStatus.PENDING) {
@@ -134,7 +134,7 @@ public class BidService {
     public Bid accept(Long bidId, Long designerId) {
         Bid bid = getBidOrThrow(bidId);
         // Fresh, not cached: this awards the mission and writes it back.
-        Mission mission = getFreshMissionOrThrow(bid.getMissionId());
+        Mission mission = getFreshMissionOrThrow(bid.getMission().getId());
         if (!designerId.equals(mission.getUserId())) {
             throw new MissionAccessDeniedException(mission.getId());
         }
@@ -149,7 +149,7 @@ public class BidService {
 
         bid.setStatus(BidStatus.ACCEPTED);
         bidRepository.save(bid);
-        List<Bid> losers = bidRepository.findByMissionIdAndStatus(mission.getId(), BidStatus.PENDING).stream()
+        List<Bid> losers = bidRepository.findByMission_IdAndStatus(mission.getId(), BidStatus.PENDING).stream()
                 .filter(other -> !other.getId().equals(bid.getId()))
                 .toList();
         losers.forEach(other -> {
@@ -158,7 +158,7 @@ public class BidService {
         });
 
         mission.setStatus(MissionStatus.AWARDED);
-        mission.setAwardedPilotId(bid.getPilotId());
+        mission.setAwardedPilotId(bid.getPilot().getId());
         missionDataAccess.save(mission);
 
         notifyDecision(mission, bid, true);
@@ -169,11 +169,11 @@ public class BidService {
     /** In-app notification + best-effort email to a pilot whose bid was decided. */
     private void notifyDecision(Mission mission, Bid bid, boolean accepted) {
         if (accepted) {
-            notificationService.create(NewNotification.bidAccepted(bid.getPilotId(), mission));
+            notificationService.create(NewNotification.bidAccepted(bid.getPilot().getId(), mission));
         } else {
-            notificationService.create(NewNotification.bidRejected(bid.getPilotId(), mission));
+            notificationService.create(NewNotification.bidRejected(bid.getPilot().getId(), mission));
         }
-        userRepository.findById(bid.getPilotId())
+        userRepository.findById(bid.getPilot().getId())
                 .ifPresent(pilot -> emailService.sendBidDecision(pilot, mission, bid.getAmount(), accepted));
     }
 

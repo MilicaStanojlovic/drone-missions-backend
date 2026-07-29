@@ -7,6 +7,8 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -35,11 +37,13 @@ public class Bid {
 
     // The mission this bid is for, and the pilot who placed it. Plain FK ids,
     // matching how Mission.userId references its owner.
-    @Column(nullable = false)
-    private Long missionId;
+    @ManyToOne
+    @JoinColumn(name = "mission_id", nullable = false)
+    private Mission mission;
 
-    @Column(nullable = false)
-    private Long pilotId;
+    @ManyToOne
+    @JoinColumn(name = "pilot_id", nullable = false)
+    private User pilot;
 
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal amount;

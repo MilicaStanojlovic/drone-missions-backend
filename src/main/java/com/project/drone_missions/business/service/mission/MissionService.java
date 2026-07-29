@@ -137,7 +137,7 @@ public class MissionService {
         mission.setStatus(MissionStatus.CANCELLED);
         missionDataAccess.save(mission);
 
-        bidRepository.findByMissionIdOrderByCreatedAtDesc(mission.getId()).forEach(bid -> {
+        bidRepository.findByMission_IdOrderByCreatedAtDesc(mission.getId()).forEach(bid -> {
             if (bid.getStatus() == BidStatus.PENDING || bid.getStatus() == BidStatus.ACCEPTED) {
                 bid.setStatus(BidStatus.REJECTED);
                 bidRepository.save(bid);
