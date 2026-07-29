@@ -222,13 +222,15 @@ public class CachingMissionDataAccess implements MissionDataAccess {
     }
 
     /**
-     * The copy that goes into the cache: detached from JPA, with its collections frozen so
-     * every copy handed out afterwards can share them safely.
+     * The copy that goes into the cache: detached from JPA, collections frozen so every copy
+     * handed out can share them. The designer/awardedPilot relations are shared rather than
+     * copied — the one way left for a caller to reach into a cached entry, by mutating the
+     * User it was handed. Copying them here would cache stale account rows instead.
      */
     private static Mission toCacheable(Mission m) {
         return new Mission(
                 m.getId(), m.getName(), m.getDescription(), m.getStatus(),
-                m.getUserId(), m.getAwardedPilotId(),
+                m.getDesigner(), m.getAwardedPilot(),
                 m.getStartTime(), m.getEndTime(),
                 m.getLocation(), m.getBiddingDeadline(),
                 m.getWaypoints() == null ? null : List.copyOf(m.getWaypoints()),
@@ -240,7 +242,7 @@ public class CachingMissionDataAccess implements MissionDataAccess {
     private static Mission fromCache(Mission cached) {
         return new Mission(
                 cached.getId(), cached.getName(), cached.getDescription(), cached.getStatus(),
-                cached.getUserId(), cached.getAwardedPilotId(),
+                cached.getDesigner(), cached.getAwardedPilot(),
                 cached.getStartTime(), cached.getEndTime(),
                 cached.getLocation(), cached.getBiddingDeadline(),
                 cached.getWaypoints(),

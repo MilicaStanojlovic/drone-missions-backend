@@ -18,7 +18,7 @@ import java.util.Objects;
  * under {@code web.dto}, which would make {@code business} depend on {@code web}.
  */
 public record NewNotification(Long userId, NotificationType type, String title,
-                              String message, Long missionId) {
+                              String message, Mission mission) {
 
     public NewNotification {
         Objects.requireNonNull(userId, "userId");
@@ -30,7 +30,7 @@ public record NewNotification(Long userId, NotificationType type, String title,
         return new NewNotification(pilotId, NotificationType.BID_ACCEPTED,
                 "Bid accepted",
                 "Your bid on \"%s\" was accepted — the mission is yours.".formatted(mission.getName()),
-                mission.getId());
+                mission);
     }
 
     /** The pilot lost: another bid was chosen for this mission. */
@@ -38,7 +38,7 @@ public record NewNotification(Long userId, NotificationType type, String title,
         return new NewNotification(pilotId, NotificationType.BID_REJECTED,
                 "Bid not selected",
                 "Your bid on \"%s\" wasn't selected.".formatted(mission.getName()),
-                mission.getId());
+                mission);
     }
 
     /** The designer cancelled a mission this pilot had already won. */
@@ -46,7 +46,7 @@ public record NewNotification(Long userId, NotificationType type, String title,
         return new NewNotification(pilotId, NotificationType.MISSION_CANCELLED,
                 "Mission cancelled",
                 "\"%s\" was cancelled by the designer.".formatted(mission.getName()),
-                mission.getId());
+                mission);
     }
 
     /** The awarded mission's flight window has passed without being marked finished. */
@@ -55,6 +55,6 @@ public record NewNotification(Long userId, NotificationType type, String title,
                 "Has your flight ended?",
                 "\"%s\" has passed its end date. Mark it finished if the flight is done."
                         .formatted(mission.getName()),
-                mission.getId());
+                mission);
     }
 }

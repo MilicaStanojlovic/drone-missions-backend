@@ -11,12 +11,12 @@ import java.util.Optional;
 @Repository
 public interface NotificationRepository extends JpaRepository<Notification, Long> {
 
-    List<Notification> findByUserIdOrderByCreatedAtDesc(Long userId);
+    List<Notification> findByUser_IdOrderByCreatedAtDesc(Long userId);
 
-    long countByUserIdAndReadAtIsNull(Long userId);
+    long countByUser_IdAndReadAtIsNull(Long userId);
 
-    Optional<Notification> findByIdAndUserId(Long id, Long userId);
+    Optional<Notification> findByIdAndUser_Id(Long id, Long userId);
 
     /** Guards the overdue scheduler so each mission is notified only once. */
-    boolean existsByUserIdAndMissionIdAndType(Long userId, Long missionId, NotificationType type);
+    boolean existsByUser_IdAndMission_IdAndType(Long userId, Long missionId, NotificationType type);
 }
