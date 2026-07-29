@@ -13,7 +13,7 @@ public class NotificationMapper {
                 notification.getType(),
                 notification.getTitle(),
                 notification.getMessage(),
-                notification.getMissionId(),
+                notification.getMission() == null ? null : notification.getMission().getId(),
                 notification.getReadAt() != null,
                 notification.getCreatedAt()
         );

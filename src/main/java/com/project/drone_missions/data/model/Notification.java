@@ -7,6 +7,8 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -33,8 +35,9 @@ public class Notification {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
-    private Long userId;
+    @ManyToOne
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 32)
@@ -47,7 +50,9 @@ public class Notification {
     private String message;
 
     /** The mission this notification is about; null for non-mission notifications. */
-    private Long missionId;
+    @ManyToOne
+    @JoinColumn(name = "mission_id")
+    private Mission mission;
 
     /** Null while unread; set when the recipient marks it read. */
     private Instant readAt;
