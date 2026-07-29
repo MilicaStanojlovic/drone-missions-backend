@@ -51,7 +51,7 @@ public class JpaMissionDataAccess implements MissionDataAccess {
                         "%" + query.location().toLowerCase() + "%"));
             }
             if (query.keyword() != null) {
-                String pattern = "%" + query.keyword().toLowerCase() + "%";  // normalizovati issue 2
+                String pattern = "%" + query.keyword().toLowerCase() + "%";
                 predicates.add(cb.or(
                         cb.like(cb.lower(root.<String>get("description")), pattern),
                         cb.like(cb.lower(root.<String>get("name")), pattern)));

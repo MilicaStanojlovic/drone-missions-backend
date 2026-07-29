@@ -15,8 +15,12 @@ import java.util.Set;
  *
  * @param statuses the mission statuses considered "open" — supplied by the caller so the
  *                 domain decision stays in the business layer
- * @param location case-insensitive substring match on location, or null for no filter
- * @param keyword  case-insensitive substring match on name or description, or null
+ * @param location substring match on location, already lowercased and trimmed, or null for no
+ *                 filter — normalising the value here (not just at the SQL layer) is what
+ *                 keeps two case-different searches for the same thing from becoming two
+ *                 distinct entries in the list cache
+ * @param keyword  substring match on name or description, already lowercased and trimmed, or
+ *                 null, normalised for the same reason as {@code location}
  * @param from     inclusive lower bound the flight window must reach, or null
  * @param to       exclusive upper bound the flight window must start before, or null
  */
