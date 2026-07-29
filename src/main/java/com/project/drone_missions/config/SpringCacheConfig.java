@@ -64,9 +64,7 @@ public class SpringCacheConfig {
      */
     @Bean
     public CacheManager cacheManager(MissionCacheProperties properties) {
-        var manager = new CaffeineCacheManager(); // var umesto CaffeineCacheManager TODO hooks PostToolUse script
-        // TODO Desktop scheduler, routines - radi na cloud-u.. nocu da pogleda issues na github repo
-        // napraviti posebnu granu, popravi issue, ili neki improvement
+        CaffeineCacheManager manager = new CaffeineCacheManager();
 
         // Absent missions are never cached (see SpringCacheMissionDataAccess#findById), so a null
         // value reaching the cache would be a bug — fail loudly rather than store it.

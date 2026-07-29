@@ -29,9 +29,6 @@ public class Rating {
     @JoinColumn(name = "mission_id", nullable = false)
     private Mission mission;
 
-//    @OneToOne
-//    private Mission mission;
-
     @ManyToOne
     @JoinColumn(name = "rater_id", nullable = false)
     private User rater;

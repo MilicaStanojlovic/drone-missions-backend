@@ -40,7 +40,8 @@ public class MissionController {
     /** One aggregate query for the whole page, so cards never cost a rating lookup each. */
     private List<MissionResponse> toResponses(List<Mission> missions) {
         Map<Long, RatingSummary> ratings = ratingService.summariesFor( // TODO refactor
-                missions.stream().map(Mission::getDesignerId).toList());
+                missions.stream()
+                        .map(Mission::getDesignerId).toList());
         return missions.stream()
                 .map(m -> mapper.toResponse(m, ratingOf(ratings, m.getDesignerId())))
                 .toList();
@@ -52,7 +53,7 @@ public class MissionController {
      */
     private static RatingSummary ratingOf(Map<Long, RatingSummary> ratings, Long userId) {
         return userId == null ? RatingSummary.NONE : ratings.getOrDefault(userId, RatingSummary.NONE);
-    } // TODO RatingMapper
+    }
 
     private MissionResponse toResponse(Mission mission) {
         return mapper.toResponse(mission, ratingService.summaryFor(mission.getDesignerId()));

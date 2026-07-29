@@ -27,7 +27,7 @@ import java.util.List;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class Mission { // TODO Base Entity with id, createdAt, updatedAt with inheritance
+public class Mission {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -50,8 +50,6 @@ public class Mission { // TODO Base Entity with id, createdAt, updatedAt with in
 
     // Id of the pilot whose bid was accepted. Null until the mission is awarded;
     // set (with status → AWARDED) when the designer accepts a bid.
-
-    // TODO Primeni Hibernate anotacije, pogledati entitete, plan, zameni id-eve do drugih entiteta sa actual entitetima, pomoc za relacije pogledati u migracijama
 
     @ManyToOne
     @JoinColumn(name = "awarded_pilot_id")
