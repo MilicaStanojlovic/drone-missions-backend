@@ -6,7 +6,7 @@ import com.project.drone_missions.business.exception.mission.MissionNotFoundExce
 import com.project.drone_missions.business.service.mail.EmailService;
 import com.project.drone_missions.business.service.notification.NewNotification;
 import com.project.drone_missions.business.service.notification.NotificationService;
-import com.project.drone_missions.data.access.MissionDataAccess;
+import com.project.drone_missions.data.access.MissionDao;
 import com.project.drone_missions.data.access.OpenMissionQuery;
 import com.project.drone_missions.data.model.Bid;
 import com.project.drone_missions.data.model.BidStatus;
@@ -37,7 +37,7 @@ public class MissionService {
     private static final Set<MissionStatus> OPEN_STATUSES =
             Set.of(MissionStatus.PUBLISHED, MissionStatus.BIDDING);
 
-    private final MissionDataAccess missionDataAccess;
+    private final MissionDao missionDao;
     private final BidRepository bidRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
@@ -46,7 +46,7 @@ public class MissionService {
     /** Ownership is set here, not in the controller, which has no business holding a repository. */
     public Mission create(Mission mission, Long designerId) {
         mission.setDesigner(userRepository.getReferenceById(designerId));
-        return missionDataAccess.save(mission);
+        return missionDao.save(mission);
     }
 
     /**
@@ -65,7 +65,7 @@ public class MissionService {
         Instant dayStart = date == null ? null : date.atStartOfDay(zone).toInstant();
         Instant dayEndExclusive = date == null ? null : date.plusDays(1).atStartOfDay(zone).toInstant();
 
-        return missionDataAccess.findOpen(
+        return missionDao.findOpen(
                 new OpenMissionQuery(OPEN_STATUSES, loc, kw, dayStart, dayEndExclusive));
     }
 
@@ -82,12 +82,12 @@ public class MissionService {
 
     /** The missions the caller created and owns. */
     public List<Mission> findOwnedBy(Long currentUserId) {
-        return missionDataAccess.findByUserId(currentUserId);
+        return missionDao.findByUserId(currentUserId);
     }
 
     /** The missions awarded to the calling pilot (their "jobs"). */
     public List<Mission> findAwardedTo(Long pilotId) {
-        return missionDataAccess.findByAwardedPilotId(pilotId);
+        return missionDao.findByAwardedPilotId(pilotId);
     }
 
     /**
@@ -105,7 +105,7 @@ public class MissionService {
                     "Mission %d cannot be started from status %s".formatted(id, mission.getStatus()));
         }
         mission.setStatus(MissionStatus.IN_PROGRESS);
-        return missionDataAccess.save(mission);
+        return missionDao.save(mission);
     }
 
     /**
@@ -124,7 +124,7 @@ public class MissionService {
                     "Mission %d cannot be completed from status %s".formatted(id, mission.getStatus()));
         }
         mission.setStatus(MissionStatus.COMPLETED);
-        return missionDataAccess.save(mission);
+        return missionDao.save(mission);
     }
 
     /**
@@ -143,7 +143,7 @@ public class MissionService {
                     "Mission %d cannot be cancelled from status %s".formatted(id, mission.getStatus()));
         }
         mission.setStatus(MissionStatus.CANCELLED);
-        missionDataAccess.save(mission);
+        missionDao.save(mission);
 
         bidRepository.findByMission_IdOrderByCreatedAtDesc(mission.getId()).forEach(bid -> {
             if (bid.getStatus() == BidStatus.PENDING || bid.getStatus() == BidStatus.ACCEPTED) {
@@ -190,24 +190,24 @@ public class MissionService {
         mission.setGeofence(changes.getGeofence());
         // status is intentionally not modified on update — a mission's
         // lifecycle status is never changed by an edit.
-        return missionDataAccess.save(mission);
+        return missionDao.save(mission);
     }
 
     public void delete(Long id, Long currentUserId) {
         Mission mission = getFreshOrThrow(id);
         requireOwner(mission, currentUserId);
-        missionDataAccess.delete(mission);
+        missionDao.delete(mission);
     }
 
     /** Read-only lookup — may be served from cache, so never hand the result to save(). */
     private Mission getOrThrow(Long id) {
-        return missionDataAccess.findById(id)
+        return missionDao.findById(id)
                 .orElseThrow(() -> new MissionNotFoundException(id));
     }
 
     /** Lookup for a flow that is about to modify the mission — always a live database row. */
     private Mission getFreshOrThrow(Long id) {
-        return missionDataAccess.findFresh(id)
+        return missionDao.findFresh(id)
                 .orElseThrow(() -> new MissionNotFoundException(id));
     }
 

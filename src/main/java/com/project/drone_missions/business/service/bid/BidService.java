@@ -13,7 +13,7 @@ import com.project.drone_missions.data.model.BidStatus;
 import com.project.drone_missions.data.model.Mission;
 import com.project.drone_missions.data.model.MissionStatus;
 import com.project.drone_missions.data.model.User;
-import com.project.drone_missions.data.access.MissionDataAccess;
+import com.project.drone_missions.data.access.MissionDao;
 import com.project.drone_missions.data.repository.BidRepository;
 import com.project.drone_missions.data.repository.UserRepository;
 import lombok.AllArgsConstructor;
@@ -34,7 +34,7 @@ public class BidService {
             Set.of(MissionStatus.PUBLISHED, MissionStatus.BIDDING);
 
     private final BidRepository bidRepository;
-    private final MissionDataAccess missionDataAccess;
+    private final MissionDao missionDao;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
     private final EmailService emailService;
@@ -76,7 +76,7 @@ public class BidService {
 
         if (mission.getStatus() == MissionStatus.PUBLISHED) {
             mission.setStatus(MissionStatus.BIDDING);
-            missionDataAccess.save(mission);
+            missionDao.save(mission);
         }
 
         // Let the mission's owner know a bid came in (best-effort email).
@@ -159,7 +159,7 @@ public class BidService {
 
         mission.setStatus(MissionStatus.AWARDED);
         mission.setAwardedPilot(bid.getPilot());
-        missionDataAccess.save(mission);
+        missionDao.save(mission);
 
         notifyDecision(mission, bid, true);
         losers.forEach(loser -> notifyDecision(mission, loser, false));
@@ -179,13 +179,13 @@ public class BidService {
 
     /** Read-only lookup — may be served from cache, so never hand the result to save(). */
     private Mission getMissionOrThrow(Long missionId) {
-        return missionDataAccess.findById(missionId)
+        return missionDao.findById(missionId)
                 .orElseThrow(() -> new MissionNotFoundException(missionId));
     }
 
     /** Lookup for a flow that is about to modify the mission — always a live database row. */
     private Mission getFreshMissionOrThrow(Long missionId) {
-        return missionDataAccess.findFresh(missionId)
+        return missionDao.findFresh(missionId)
                 .orElseThrow(() -> new MissionNotFoundException(missionId));
     }
 

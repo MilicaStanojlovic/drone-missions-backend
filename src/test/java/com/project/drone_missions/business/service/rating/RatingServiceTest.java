@@ -4,7 +4,7 @@ import com.project.drone_missions.business.exception.mission.MissionNotFoundExce
 import com.project.drone_missions.business.exception.rating.AlreadyRatedException;
 import com.project.drone_missions.business.exception.rating.NotMissionParticipantException;
 import com.project.drone_missions.business.exception.rating.RatingNotYetAllowedException;
-import com.project.drone_missions.data.access.MissionDataAccess;
+import com.project.drone_missions.data.access.MissionDao;
 import com.project.drone_missions.data.model.Mission;
 import com.project.drone_missions.data.model.MissionStatus;
 import com.project.drone_missions.data.model.Rating;
@@ -42,7 +42,7 @@ class RatingServiceTest {
     private RatingRepository ratingRepository;
 
     @Mock
-    private MissionDataAccess missionDataAccess;
+    private MissionDao missionDao;
 
     @Mock
     private UserRepository userRepository;
@@ -51,7 +51,7 @@ class RatingServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new RatingService(ratingRepository, missionDataAccess, userRepository);
+        service = new RatingService(ratingRepository, missionDao, userRepository);
         lenient().when(userRepository.getReferenceById(any(Long.class)))
                 .thenAnswer(i -> user(i.getArgument(0)));
     }
@@ -76,7 +76,7 @@ class RatingServiceTest {
     }
 
     private void givenMission(Mission mission) {
-        when(missionDataAccess.findById(MISSION_ID)).thenReturn(Optional.of(mission));
+        when(missionDao.findById(MISSION_ID)).thenReturn(Optional.of(mission));
     }
 
     private RatingRepository.RateeSummary summaryRow(Long rateeId, double average, long total) {
@@ -160,7 +160,7 @@ class RatingServiceTest {
 
     @Test
     void ratingAMissionThatDoesNotExistIsANotFound() {
-        when(missionDataAccess.findById(MISSION_ID)).thenReturn(Optional.empty());
+        when(missionDao.findById(MISSION_ID)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.create(MISSION_ID, PILOT_ID, (short) 5, null))
                 .isInstanceOf(MissionNotFoundException.class);
