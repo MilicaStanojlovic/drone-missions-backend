@@ -30,7 +30,7 @@ import java.util.Optional;
  * <p>So: <strong>read-only flows use {@link #findById}; anything that will call {@link #save}
  * uses {@link #findFresh}.</strong>
  */
-public interface MissionDataAccess { // MissionDAO, @Cacheable Springova anotacija, paralelna anotacija u env varijabli koja ce
+public interface MissionDao { // MissionDAO, @Cacheable Springova anotacija, paralelna anotacija u env varijabli koja ce
     // sa profilima, setujemo profile u starting konfiguraciji, i env varijable i profil koji ce se koristiti
     // hooks komentari, skripta
     /**

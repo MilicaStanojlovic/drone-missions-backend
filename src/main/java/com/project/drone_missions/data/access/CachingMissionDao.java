@@ -17,7 +17,7 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Caches mission reads in front of another {@link MissionDataAccess}. A decorator rather than
+ * Caches mission reads in front of another {@link MissionDao}. A decorator rather than
  * a cache embedded in a service: because every mission read and write already funnels through
  * this interface, this object observes all of them and invalidation cannot be forgotten at a
  * call site — including {@code BidService}, which writes missions without ever touching
@@ -53,24 +53,24 @@ import java.util.Optional;
  *   <li><b>A benign load race.</b> A reader that misses can have its database load land after a
  *       concurrent writer's eviction, re-inserting a just-superseded row. It is bounded by TTL
  *       and harmless in practice, because no write path ever reads from the cache — see
- *       {@link MissionDataAccess#findFresh}. Closing it properly needs load-generation
+ *       {@link MissionDao#findFresh}. Closing it properly needs load-generation
  *       counters, which is not worth the complexity here.</li>
  * </ul>
  */
 @Slf4j
-public class CachingMissionDataAccess implements MissionDataAccess {
+public class CachingMissionDao implements MissionDao {
 
     /** Cache key for the owner/pilot list queries, kept distinct from an {@link OpenMissionQuery}. */
     private record OwnerKey(String kind, Long id) {
     }
 
-    private final MissionDataAccess delegate;
+    private final MissionDao delegate;
     private final TtlCache<Long, Mission> entities;
     private final TtlCache<Object, List<Long>> lists;
 
-    public CachingMissionDataAccess(MissionDataAccess delegate,
-                                    MissionCacheProperties properties,
-                                    Clock clock) {
+    public CachingMissionDao(MissionDao delegate,
+                              MissionCacheProperties properties,
+                              Clock clock) {
         this.delegate = delegate;
         this.entities = new TtlCache<>(properties.ttl(), properties.maxSize(), clock);
         this.lists = new TtlCache<>(properties.ttl(), properties.listMaxSize(), clock);
@@ -85,7 +85,7 @@ public class CachingMissionDataAccess implements MissionDataAccess {
         }
         Optional<Mission> cached = entities.get(id);
         if (cached.isPresent()) {
-            return cached.map(CachingMissionDataAccess::fromCache);
+            return cached.map(CachingMissionDao::fromCache);
         }
         Optional<Mission> loaded = delegate.findById(id);
         // Absent ids are deliberately not cached: they are the 404 path, ids come from the

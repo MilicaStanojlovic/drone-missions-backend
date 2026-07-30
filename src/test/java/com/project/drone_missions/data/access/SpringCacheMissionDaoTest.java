@@ -35,7 +35,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * {@code @Cacheable} is applied by a proxy, so unlike {@link CachingMissionDataAccessTest} this
+ * {@code @Cacheable} is applied by a proxy, so unlike {@link CachingMissionDaoTest} this
  * cannot be a plain Mockito test — without a Spring context the annotations would do nothing and
  * every assertion would pass for the wrong reason.
  *
@@ -45,7 +45,7 @@ import static org.mockito.Mockito.when;
  * {@code CaffeineCacheManager} wiring, the property binding and the profile gate are covered too.
  */
 @ExtendWith(SpringExtension.class)
-@ContextConfiguration(classes = {SpringCacheConfig.class, SpringCacheMissionDataAccessTest.MockDelegate.class})
+@ContextConfiguration(classes = {SpringCacheConfig.class, SpringCacheMissionDaoTest.MockDelegate.class})
 @ActiveProfiles("cache-spring")
 @TestPropertySource(properties = {
         "app.cache.mission.enabled=true",
@@ -54,22 +54,22 @@ import static org.mockito.Mockito.when;
         "app.cache.mission.list-max-size=50",
         "app.cache.mission.report-interval=PT5M"
 })
-class SpringCacheMissionDataAccessTest {
+class SpringCacheMissionDaoTest {
 
     /** The database-backed end of the decorator, mocked as the concrete type the config injects. */
     @Configuration
     static class MockDelegate {
         @Bean
-        JpaMissionDataAccess jpaMissionDataAccess() {
-            return Mockito.mock(JpaMissionDataAccess.class);
+        JpaMissionDao jpaMissionDao() {
+            return Mockito.mock(JpaMissionDao.class);
         }
     }
 
     @Autowired
-    private SpringCacheMissionDataAccess cache;
+    private SpringCacheMissionDao cache;
 
     @Autowired
-    private JpaMissionDataAccess delegate;
+    private JpaMissionDao delegate;
 
     @Autowired
     private CacheManager cacheManager;
@@ -140,11 +140,11 @@ class SpringCacheMissionDataAccessTest {
     }
 
     /**
-     * Pins the documented difference from {@link CachingMissionDataAccess}, which copies in and
+     * Pins the documented difference from {@link CachingMissionDao}, which copies in and
      * out: here the stored instance itself is handed to every caller. Asserted so the behaviour
      * is a known trade-off rather than a surprise — mutating a returned mission in place would
      * corrupt the entry for everyone. Safe today because every write flow uses
-     * {@link MissionDataAccess#findFresh}, which is never served from cache.
+     * {@link MissionDao#findFresh}, which is never served from cache.
      */
     @Test
     void cachedReadHandsBackTheStoredInstance() {
@@ -355,23 +355,23 @@ class SpringCacheMissionDataAccessTest {
      */
     @Test
     void statisticsAreRecorded() {
-        long hitsBefore = nativeStats(SpringCacheMissionDataAccess.MISSIONS).hitCount();
-        long missesBefore = nativeStats(SpringCacheMissionDataAccess.MISSIONS).missCount();
+        long hitsBefore = nativeStats(SpringCacheMissionDao.MISSIONS).hitCount();
+        long missesBefore = nativeStats(SpringCacheMissionDao.MISSIONS).missCount();
         when(delegate.findById(1L)).thenReturn(Optional.of(mission(1L)));
 
         cache.findById(1L);   // miss, then load
         cache.findById(1L);   // hit
 
-        assertThat(nativeStats(SpringCacheMissionDataAccess.MISSIONS).hitCount())
+        assertThat(nativeStats(SpringCacheMissionDao.MISSIONS).hitCount())
                 .isEqualTo(hitsBefore + 1);
-        assertThat(nativeStats(SpringCacheMissionDataAccess.MISSIONS).missCount())
+        assertThat(nativeStats(SpringCacheMissionDao.MISSIONS).missCount())
                 .isEqualTo(missesBefore + 1);
     }
 
     /** The reported line must stay parseable and comparable with the hand-written cache's. */
     @Test
     void reportedStatisticsKeepTheSharedFormat() {
-        assertThat(cache.statsOf(SpringCacheMissionDataAccess.MISSIONS))
+        assertThat(cache.statsOf(SpringCacheMissionDao.MISSIONS))
                 .matches("hits=\\d+ misses=\\d+ ratio=[\\d.,]+ size=\\d+ evictions=\\d+");
     }
 
@@ -382,7 +382,7 @@ class SpringCacheMissionDataAccessTest {
      */
     @Test
     void anUntouchedCacheReportsAZeroRatio() {
-        assertThat(SpringCacheMissionDataAccess.formatStats(0, 0, 0, 0))
+        assertThat(SpringCacheMissionDao.formatStats(0, 0, 0, 0))
                 .startsWith("hits=0 misses=0 ratio=0")
                 .endsWith("size=0 evictions=0");
     }
