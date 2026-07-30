@@ -4,6 +4,7 @@ import com.project.drone_missions.business.service.mail.EmailService;
 import com.project.drone_missions.business.service.notification.NotificationService;
 import com.project.drone_missions.data.access.MissionDataAccess;
 import com.project.drone_missions.data.access.OpenMissionQuery;
+import com.project.drone_missions.data.model.Mission;
 import com.project.drone_missions.data.model.MissionStatus;
 import com.project.drone_missions.data.repository.BidRepository;
 import com.project.drone_missions.data.repository.UserRepository;
@@ -96,6 +97,17 @@ class MissionServiceTest {
 
         assertThat(capturedQuery().statuses())
                 .isEqualTo(Set.of(MissionStatus.PUBLISHED, MissionStatus.BIDDING));
+    }
+
+    @Test
+    void createForcesStatusToPublishedRegardlessOfWhatTheCallerSupplied() {
+        Mission requested = new Mission();
+        requested.setStatus(MissionStatus.COMPLETED);
+        when(repository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Mission created = service.create(requested, 1L);
+
+        assertThat(created.getStatus()).isEqualTo(MissionStatus.PUBLISHED);
     }
 
     private OpenMissionQuery capturedQuery() {

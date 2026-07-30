@@ -43,9 +43,16 @@ public class MissionService {
     private final NotificationService notificationService;
     private final EmailService emailService;
 
-    /** Ownership is set here, not in the controller, which has no business holding a repository. */
+    /**
+     * Ownership is set here, not in the controller, which has no business holding a repository.
+     * Status is forced to PUBLISHED rather than trusting whatever the incoming entity carries —
+     * the request DTO's status field is client-supplied, and without this a caller could create
+     * a mission directly into AWARDED/IN_PROGRESS/COMPLETED, skipping the entire bidding/award
+     * lifecycle. Mirrors {@link #update} treating status as not client-controlled.
+     */
     public Mission create(Mission mission, Long designerId) {
         mission.setDesigner(userRepository.getReferenceById(designerId));
+        mission.setStatus(MissionStatus.PUBLISHED);
         return missionDataAccess.save(mission);
     }
 
