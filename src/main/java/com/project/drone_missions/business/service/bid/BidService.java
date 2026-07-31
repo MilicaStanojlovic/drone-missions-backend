@@ -173,8 +173,9 @@ public class BidService {
         } else {
             notificationService.create(NewNotification.bidRejected(bid.getPilot().getId(), mission));
         }
-        userRepository.findById(bid.getPilot().getId())
-                .ifPresent(pilot -> emailService.sendBidDecision(pilot, mission, bid.getAmount(), accepted));
+        // bid.getPilot() is already the loaded pilot (Bid.pilot is an eager @ManyToOne),
+        // so no extra lookup is needed here.
+        emailService.sendBidDecision(bid.getPilot(), mission, bid.getAmount(), accepted);
     }
 
     /** Read-only lookup — may be served from cache, so never hand the result to save(). */
