@@ -8,6 +8,7 @@ import com.project.drone_missions.data.repository.UserRepository;
 import com.project.drone_missions.security.UserPrincipal;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -55,7 +56,14 @@ public class AuthService {
         user.setEmail(email);
         user.setPasswordHash(passwordEncoder.encode(rawPassword));
         user.setRole(role);
-        return userRepository.save(user);
+        try {
+            return userRepository.save(user);
+        } catch (DataIntegrityViolationException exception) {
+            // existsByEmail above is check-then-act: two concurrent registrations for the
+            // same email can both pass it before either inserts, so the second save() hits
+            // the users_email_unique constraint instead. Surface the same 409 either way.
+            throw new EmailAlreadyExistsException(email);
+        }
     }
 
     /**
