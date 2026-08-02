@@ -51,13 +51,7 @@ public class NotificationService {
 
     /** Mark all of the caller's unread notifications read. */
     public void markAllRead(Long userId) {
-        Instant now = Instant.now();
-        repository.findByUser_IdOrderByCreatedAtDesc(userId).stream()
-                .filter(n -> n.getReadAt() == null)
-                .forEach(n -> {
-                    n.setReadAt(now);
-                    repository.save(n);
-                });
+        repository.markAllReadForUser(userId, Instant.now());
     }
 
     /** Whether an overdue notification already exists for this pilot + mission (dedup). */
