@@ -1,6 +1,7 @@
 package com.project.drone_missions.data.access;
 
 import com.project.drone_missions.data.model.Mission;
+import com.project.drone_missions.data.model.MissionModeration;
 import com.project.drone_missions.data.model.MissionStatus;
 import com.project.drone_missions.data.repository.MissionRepository;
 import jakarta.persistence.criteria.Predicate;
@@ -47,6 +48,13 @@ public class JpaMissionDao implements MissionDao {
         Specification<Mission> spec = (root, criteriaQuery, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
             predicates.add(root.get("status").in(query.statuses()));
+            // Moderation: only VISIBLE missions from unsuspended designers reach the
+            // feed. Constant predicates, so OpenMissionQuery cache keys stay valid;
+            // legacy ownerless rows (null designer) stay visible.
+            predicates.add(cb.equal(root.get("moderation"), MissionModeration.VISIBLE));
+            predicates.add(cb.or(
+                    cb.isNull(root.get("designer")),
+                    cb.isNull(root.get("designer").get("suspendedAt"))));
             if (query.location() != null) {
                 predicates.add(cb.like(cb.lower(root.<String>get("location")),
                         "%" + query.location().toLowerCase() + "%"));
@@ -70,17 +78,23 @@ public class JpaMissionDao implements MissionDao {
 
     @Override
     public List<Mission> findByUserId(Long userId) {
-        return repository.findByDesigner_Id(userId);
+        return repository.findByDesigner_IdAndModerationNot(userId, MissionModeration.REMOVED);
     }
 
     @Override
     public List<Mission> findByAwardedPilotId(Long pilotId) {
-        return repository.findByAwardedPilot_Id(pilotId);
+        return repository.findByAwardedPilot_IdAndModerationNot(pilotId, MissionModeration.REMOVED);
     }
 
     @Override
     public List<Mission> findOverdue(Collection<MissionStatus> statuses, Instant endedBefore) {
-        return repository.findByAwardedPilot_IdIsNotNullAndStatusInAndEndTimeBefore(statuses, endedBefore);
+        return repository.findByAwardedPilot_IdIsNotNullAndStatusInAndEndTimeBeforeAndModerationNot(
+                statuses, endedBefore, MissionModeration.REMOVED);
+    }
+
+    /** No cache here, so nothing to drop. */
+    @Override
+    public void invalidateLists() {
     }
 
     @Override

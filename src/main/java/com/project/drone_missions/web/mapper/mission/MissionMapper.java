@@ -35,6 +35,7 @@ public class MissionMapper {
                 mission.getName(),
                 mission.getDescription(),
                 mission.getStatus(),
+                mission.getModeration(),
                 mission.getDesignerId(),
                 designer == null ? null : designer.getEmail(),
                 designer == null ? null : designer.getUsername(),

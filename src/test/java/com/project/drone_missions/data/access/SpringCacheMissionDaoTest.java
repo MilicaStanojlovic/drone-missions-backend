@@ -3,6 +3,7 @@ package com.project.drone_missions.data.access;
 import com.project.drone_missions.config.SpringCacheConfig;
 import com.project.drone_missions.data.model.GeoPoint;
 import com.project.drone_missions.data.model.Mission;
+import com.project.drone_missions.data.model.MissionModeration;
 import com.project.drone_missions.data.model.MissionStatus;
 import com.project.drone_missions.data.model.User;
 import org.junit.jupiter.api.BeforeEach;
@@ -89,7 +90,7 @@ class SpringCacheMissionDaoTest {
     }
 
     private static Mission mission(Long id) {
-        return new Mission(id, "Survey", "desc", MissionStatus.PUBLISHED,
+        return new Mission(id, "Survey", "desc", MissionStatus.PUBLISHED, MissionModeration.VISIBLE,
                 user(7L), null,
                 Instant.parse("2026-02-01T10:00:00Z"), Instant.parse("2026-02-01T12:00:00Z"),
                 "Novi Sad", null,

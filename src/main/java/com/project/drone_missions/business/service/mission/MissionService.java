@@ -3,6 +3,8 @@ package com.project.drone_missions.business.service.mission;
 import com.project.drone_missions.business.exception.mission.MissionAccessDeniedException;
 import com.project.drone_missions.business.exception.mission.MissionConflictException;
 import com.project.drone_missions.business.exception.mission.MissionNotFoundException;
+import com.project.drone_missions.business.exception.user.UserNotFoundException;
+import com.project.drone_missions.business.exception.user.UserSuspendedException;
 import com.project.drone_missions.business.service.mail.EmailService;
 import com.project.drone_missions.business.service.notification.NewNotification;
 import com.project.drone_missions.business.service.notification.NotificationService;
@@ -11,7 +13,9 @@ import com.project.drone_missions.data.access.OpenMissionQuery;
 import com.project.drone_missions.data.model.Bid;
 import com.project.drone_missions.data.model.BidStatus;
 import com.project.drone_missions.data.model.Mission;
+import com.project.drone_missions.data.model.MissionModeration;
 import com.project.drone_missions.data.model.MissionStatus;
+import com.project.drone_missions.data.model.User;
 import com.project.drone_missions.data.repository.BidRepository;
 import com.project.drone_missions.data.repository.UserRepository;
 import lombok.AllArgsConstructor;
@@ -45,7 +49,12 @@ public class MissionService {
 
     /** Ownership is set here, not in the controller, which has no business holding a repository. */
     public Mission create(Mission mission, Long designerId) {
-        mission.setDesigner(userRepository.getReferenceById(designerId));
+        User designer = userRepository.findById(designerId)
+                .orElseThrow(() -> new UserNotFoundException(designerId));
+        if (designer.isSuspended()) {
+            throw new UserSuspendedException();
+        }
+        mission.setDesigner(designer);
         return missionDao.save(mission);
     }
 
@@ -105,6 +114,9 @@ public class MissionService {
         if (!pilotId.equals(mission.getAwardedPilotId())) {
             throw new MissionAccessDeniedException(id);
         }
+        if (mission.getAwardedPilot().isSuspended()) {
+            throw new UserSuspendedException();
+        }
         if (mission.getStatus() != MissionStatus.AWARDED) {
             throw new MissionConflictException(
                     "Mission %d cannot be started from status %s".formatted(id, mission.getStatus()));
@@ -123,6 +135,9 @@ public class MissionService {
         Mission mission = getFreshOrThrow(id);
         if (!pilotId.equals(mission.getAwardedPilotId())) {
             throw new MissionAccessDeniedException(id);
+        }
+        if (mission.getAwardedPilot().isSuspended()) {
+            throw new UserSuspendedException();
         }
         if (mission.getStatus() != MissionStatus.IN_PROGRESS) {
             throw new MissionConflictException(
@@ -216,11 +231,56 @@ public class MissionService {
                 .orElseThrow(() -> new MissionNotFoundException(id));
     }
 
-    /** Visible to its owner, to the awarded pilot, or to anyone once it is open for work. */
+    // ---- admin moderation ----
+
+    /** Admin: pull the mission from the pilot feed; the designer keeps it. */
+    public Mission hide(Long id) {
+        return moderate(id, MissionModeration.VISIBLE, MissionModeration.HIDDEN);
+    }
+
+    /** Admin: return a hidden mission to the feed. */
+    public Mission unhide(Long id) {
+        return moderate(id, MissionModeration.HIDDEN, MissionModeration.VISIBLE);
+    }
+
+    /** Admin: withdraw the mission from the platform entirely, owner included. Reversible. */
+    public Mission remove(Long id) {
+        Mission mission = getFreshOrThrow(id);
+        if (mission.getModeration() == MissionModeration.REMOVED) {
+            throw new MissionConflictException("Mission %d is already removed".formatted(id));
+        }
+        mission.setModeration(MissionModeration.REMOVED);
+        return missionDao.save(mission);
+    }
+
+    /** Admin: bring a removed mission back as visible. */
+    public Mission restore(Long id) {
+        return moderate(id, MissionModeration.REMOVED, MissionModeration.VISIBLE);
+    }
+
+    private Mission moderate(Long id, MissionModeration from, MissionModeration to) {
+        Mission mission = getFreshOrThrow(id);
+        if (mission.getModeration() != from) {
+            throw new MissionConflictException(
+                    "Mission %d cannot go from %s to %s".formatted(id, mission.getModeration(), to));
+        }
+        mission.setModeration(to);
+        return missionDao.save(mission);
+    }
+
+    /** Visible to its owner, to the awarded pilot, or to anyone once it is open for work.
+     *  A REMOVED mission is invisible to everyone; the feed also requires an unsuspended designer. */
     private boolean isVisibleTo(Mission mission, Long currentUserId) {
-        return currentUserId.equals(mission.getDesignerId())
-                || currentUserId.equals(mission.getAwardedPilotId())
-                || OPEN_STATUSES.contains(mission.getStatus());
+        if (mission.getModeration() == MissionModeration.REMOVED) {
+            return false;
+        }
+        if (currentUserId.equals(mission.getDesignerId())
+                || currentUserId.equals(mission.getAwardedPilotId())) {
+            return true;
+        }
+        return OPEN_STATUSES.contains(mission.getStatus())
+                && mission.getModeration() == MissionModeration.VISIBLE
+                && (mission.getDesigner() == null || !mission.getDesigner().isSuspended());
     }
 
     /** Only the mission's creator may modify or delete it. */

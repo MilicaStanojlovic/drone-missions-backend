@@ -10,6 +10,8 @@ public record UserResponse(
         String username,
         String email,
         UserRole role,
+        /** Null when the account is active; set to when it was suspended. */
+        Instant suspendedAt,
         Instant createdAt
 ) {
 }

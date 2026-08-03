@@ -149,6 +149,12 @@ public class SpringCacheMissionDao implements MissionDao {
         return delegate.findAll();
     }
 
+    /** Feed membership changed without a mission write — matches {@link CachingMissionDao#invalidateLists()}. */
+    @Override
+    @CacheEvict(value = MISSION_LISTS, allEntries = true)
+    public void invalidateLists() {
+    }
+
     // ---- writes ----
 
     /**
