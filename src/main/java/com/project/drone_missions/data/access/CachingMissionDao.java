@@ -132,6 +132,15 @@ public class CachingMissionDao implements MissionDao {
         return delegate.findAll();
     }
 
+    /**
+     * Feed membership changed without a mission write (a designer was suspended or
+     * reactivated). Only the id arrays go; the entity rows are still correct.
+     */
+    @Override
+    public void invalidateLists() {
+        lists.clear();
+    }
+
     // ---- writes ----
 
     @Override
@@ -235,7 +244,7 @@ public class CachingMissionDao implements MissionDao {
      */
     private static Mission toCacheable(Mission m) {
         return new Mission(
-                m.getId(), m.getName(), m.getDescription(), m.getStatus(),
+                m.getId(), m.getName(), m.getDescription(), m.getStatus(), m.getModeration(),
                 m.getDesigner(), m.getAwardedPilot(),
                 m.getStartTime(), m.getEndTime(),
                 m.getLocation(), m.getBiddingDeadline(),
@@ -248,6 +257,7 @@ public class CachingMissionDao implements MissionDao {
     private static Mission fromCache(Mission cached) {
         return new Mission(
                 cached.getId(), cached.getName(), cached.getDescription(), cached.getStatus(),
+                cached.getModeration(),
                 cached.getDesigner(), cached.getAwardedPilot(),
                 cached.getStartTime(), cached.getEndTime(),
                 cached.getLocation(), cached.getBiddingDeadline(),

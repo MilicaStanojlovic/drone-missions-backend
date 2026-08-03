@@ -62,6 +62,13 @@ public interface MissionDao { // MissionDAO, @Cacheable Springova anotacija, par
     /** Every mission, any status or owner, newest first. Admin flows only — never cached. */
     List<Mission> findAll();
 
+    /**
+     * Drop every cached list. For moderation events that change feed membership
+     * without a mission write — suspending a designer hides their missions, but the
+     * write lands on the users table, which the caching decorators never observe.
+     */
+    void invalidateLists();
+
     /** Persist a new or modified mission. Invalidates any cached copy. */
     Mission save(Mission mission);
 

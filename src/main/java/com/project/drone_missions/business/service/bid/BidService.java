@@ -4,6 +4,8 @@ import com.project.drone_missions.business.exception.bid.BidConflictException;
 import com.project.drone_missions.business.exception.bid.BidNotFoundException;
 import com.project.drone_missions.business.exception.mission.MissionAccessDeniedException;
 import com.project.drone_missions.business.exception.mission.MissionNotFoundException;
+import com.project.drone_missions.business.exception.user.UserNotFoundException;
+import com.project.drone_missions.business.exception.user.UserSuspendedException;
 import com.project.drone_missions.business.service.mail.EmailService;
 import com.project.drone_missions.business.service.mail.NewBidEmail;
 import com.project.drone_missions.business.service.notification.NewNotification;
@@ -11,6 +13,7 @@ import com.project.drone_missions.business.service.notification.NotificationServ
 import com.project.drone_missions.data.model.Bid;
 import com.project.drone_missions.data.model.BidStatus;
 import com.project.drone_missions.data.model.Mission;
+import com.project.drone_missions.data.model.MissionModeration;
 import com.project.drone_missions.data.model.MissionStatus;
 import com.project.drone_missions.data.model.User;
 import com.project.drone_missions.data.access.MissionDao;
@@ -47,6 +50,17 @@ public class BidService {
     public Bid place(Long missionId, Long pilotId, BigDecimal amount, String message) {
         // Fresh, not cached: the first bid on a PUBLISHED mission writes it back as BIDDING.
         Mission mission = getFreshMissionOrThrow(missionId);
+        // A moderated mission, or one whose designer is suspended, must be
+        // indistinguishable from a missing one — probing ids reveals nothing.
+        if (mission.getModeration() != MissionModeration.VISIBLE
+                || (mission.getDesigner() != null && mission.getDesigner().isSuspended())) {
+            throw new MissionNotFoundException(missionId);
+        }
+        User pilot = userRepository.findById(pilotId)
+                .orElseThrow(() -> new UserNotFoundException(pilotId));
+        if (pilot.isSuspended()) {
+            throw new UserSuspendedException();
+        }
         if (!BIDDABLE_STATUSES.contains(mission.getStatus())) {
             throw new BidConflictException(
                     "Mission %d is not open for bidding".formatted(missionId));
@@ -62,7 +76,7 @@ public class BidService {
                 .orElseGet(() -> {
                     Bid fresh = new Bid();
                     fresh.setMission(mission);
-                    fresh.setPilot(userRepository.getReferenceById(pilotId));
+                    fresh.setPilot(pilot);
                     fresh.setStatus(BidStatus.PENDING);
                     return fresh;
                 });
@@ -81,7 +95,7 @@ public class BidService {
 
         // Let the mission's owner know a bid came in (best-effort email).
         User designer = mission.getDesigner();
-        String pilotName = userRepository.findById(pilotId).map(User::getUsername).orElse("A pilot");
+        String pilotName = pilot.getUsername();
         if (designer != null) {
             emailService.sendNewBid(new NewBidEmail(designer, mission, pilotName, amount, message));
         }
@@ -145,6 +159,12 @@ public class BidService {
         if (bid.getStatus() != BidStatus.PENDING) {
             throw new BidConflictException(
                     "Bid %d has already been decided".formatted(bidId));
+        }
+        // Frozen, not rejected: the bid stays pending and becomes acceptable again
+        // if the pilot is reactivated.
+        if (bid.getPilot().isSuspended()) {
+            throw new BidConflictException(
+                    "Bid %d cannot be accepted while its pilot is suspended".formatted(bidId));
         }
 
         bid.setStatus(BidStatus.ACCEPTED);

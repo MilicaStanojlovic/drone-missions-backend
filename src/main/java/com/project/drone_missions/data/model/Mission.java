@@ -42,6 +42,11 @@ public class Mission {
     @Column(nullable = false)
     private MissionStatus status;
 
+    // Admin moderation state, orthogonal to the lifecycle status on purpose.
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 16)
+    private MissionModeration moderation = MissionModeration.VISIBLE;
+
     // Id of the user who created and owns this mission. Nullable for legacy
     // missions created before authentication existed; always set for new ones.
     @ManyToOne
