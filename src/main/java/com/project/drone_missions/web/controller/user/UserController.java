@@ -11,6 +11,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -42,5 +43,19 @@ public class UserController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<PublicUserResponse> byId(@PathVariable Long id) {
         return ResponseEntity.ok(mapper.toPublicResponse(userService.findById(id)));
+    }
+
+    /** Admin: suspend the account — blocks designing, bidding, awards, and execution. */
+    @PostMapping("/{id}/suspend")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<UserResponse> suspend(@PathVariable Long id) {
+        return ResponseEntity.ok(mapper.toResponse(userService.suspend(id)));
+    }
+
+    /** Admin: lift a suspension. */
+    @PostMapping("/{id}/reactivate")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<UserResponse> reactivate(@PathVariable Long id) {
+        return ResponseEntity.ok(mapper.toResponse(userService.reactivate(id)));
     }
 }
