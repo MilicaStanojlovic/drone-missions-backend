@@ -15,7 +15,7 @@ This project targets Java 25 LTS and uses records, so Maven and the jar must run
 "$JAVA_HOME/bin/java" -jar target/drone-missions-0.0.1-SNAPSHOT.jar
 ```
 
-In IntelliJ, also set the **Project SDK** and **language level** to 21 (File → Project Structure → Project) so the IDE matches Maven; otherwise it keeps building/running with whatever SDK the run config points at.
+In IntelliJ, also set the **Project SDK** and **language level** to 25 (File → Project Structure → Project) — and check the run configuration's JRE — so the IDE matches Maven; otherwise it keeps building/running with whatever SDK the run config points at, and the IDE (older SDK) and Maven (release 25) overwrite each other's `target/classes` with incompatible class-file versions (`UnsupportedClassVersionError: class file version 69.0`).
 
 ## Commands
 
