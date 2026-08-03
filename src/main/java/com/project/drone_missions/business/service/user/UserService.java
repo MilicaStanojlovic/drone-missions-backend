@@ -6,6 +6,7 @@ import com.project.drone_missions.data.repository.UserRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -20,6 +21,11 @@ public class UserService {
 
     public Optional<User> findByEmail(String email) {
         return repository.findByEmail(email);
+    }
+
+    /** Every account on the platform — the admin roster. */
+    public List<User> findAll() {
+        return repository.findAll();
     }
 
     /**

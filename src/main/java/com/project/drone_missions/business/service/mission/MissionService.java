@@ -80,6 +80,11 @@ public class MissionService {
         return value == null || value.isBlank() ? null : value.trim().toLowerCase();
     }
 
+    /** Every mission on the platform, unfiltered. Whether the caller may ask is the web layer's call. */
+    public List<Mission> findAll() {
+        return missionDao.findAll();
+    }
+
     /** The missions the caller created and owns. */
     public List<Mission> findOwnedBy(Long currentUserId) {
         return missionDao.findByUserId(currentUserId);

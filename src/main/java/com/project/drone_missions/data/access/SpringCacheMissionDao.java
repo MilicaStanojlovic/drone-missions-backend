@@ -143,6 +143,12 @@ public class SpringCacheMissionDao implements MissionDao {
         return delegate.findOverdue(statuses, endedBefore);
     }
 
+    /** Not cached, for the same reasons as {@link CachingMissionDao#findAll()}. */
+    @Override
+    public List<Mission> findAll() {
+        return delegate.findAll();
+    }
+
     // ---- writes ----
 
     /**
