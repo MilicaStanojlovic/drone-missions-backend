@@ -1,5 +1,5 @@
 ---
-description: Find a ClickUp task, set it to in progress, and branch off develop
+description: Find a ClickUp task, set it to in progress, branch off develop, then plan and implement it
 argument-hint: [task name or description]
 allowed-tools: Bash(git *), mcp__clickup__*
 ---
@@ -32,6 +32,27 @@ Start work on a ClickUp task.
    git config branch.feature/SLUG.clickup-task <task id>
 
 7. Report the task URL, the new status, and the branch you are on.
+
+8. Fetch the task's full details, most importantly its description
+   (and any comments that add requirements). If the branch somehow
+   has no recorded task id, ask me which task this is and search
+   for it.
+
+9. Read the description as the requirements. Before any planning,
+   ask me clarifying questions about anything ambiguous, missing, or
+   contradictory — scope, edge cases, API shape, data model. If the
+   description is empty or too thin to work from, say so and get the
+   requirements from me instead of guessing.
+
+10. Enter plan mode and plan the implementation against this repo's
+    conventions (CLAUDE.md: Spring-first, layered packages, Flyway
+    migration + entity in sync, DTO/mapper separation). Keep the plan
+    incremental — smallest shippable slice first. Wait for my
+    approval; do not touch code before it.
+
+11. After I approve, implement the plan, keeping me posted per slice.
+    When the work is done and committed, remind me that /pr will open
+    the pull request and the hook will move this task to review.
 
 Never create the ClickUp task, never change anything other than the
 status, and never push the new branch.
