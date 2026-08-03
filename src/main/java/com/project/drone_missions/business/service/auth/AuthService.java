@@ -1,5 +1,6 @@
 package com.project.drone_missions.business.service.auth;
 
+import com.project.drone_missions.business.exception.auth.AdminRegistrationNotAllowedException;
 import com.project.drone_missions.business.exception.auth.EmailAlreadyExistsException;
 import com.project.drone_missions.business.exception.auth.InvalidCredentialsException;
 import com.project.drone_missions.data.model.User;
@@ -45,8 +46,12 @@ public class AuthService {
 
     /**
      * @throws EmailAlreadyExistsException if the email is already registered
+     * @throws AdminRegistrationNotAllowedException if the requested role is ADMIN
      */
     public User createUser(String username, String email, String rawPassword, UserRole role) {
+        if (role == UserRole.ADMIN) {
+            throw new AdminRegistrationNotAllowedException();
+        }
         if (userRepository.existsByEmail(email)) {
             throw new EmailAlreadyExistsException(email);
         }
