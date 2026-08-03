@@ -149,13 +149,14 @@ public class BidService {
 
         bid.setStatus(BidStatus.ACCEPTED);
         bidRepository.save(bid);
+        // Losers are still read individually (each needs its own notification/email below),
+        // but deciding them is one statement, not a save() per row.
         List<Bid> losers = bidRepository.findByMission_IdAndStatus(mission.getId(), BidStatus.PENDING).stream()
                 .filter(other -> !other.getId().equals(bid.getId()))
                 .toList();
-        losers.forEach(other -> {
-            other.setStatus(BidStatus.REJECTED);
-            bidRepository.save(other);
-        });
+        if (!losers.isEmpty()) {
+            bidRepository.updateStatusForOtherBids(mission.getId(), bid.getId(), BidStatus.PENDING, BidStatus.REJECTED);
+        }
 
         mission.setStatus(MissionStatus.AWARDED);
         mission.setAwardedPilot(bid.getPilot());
