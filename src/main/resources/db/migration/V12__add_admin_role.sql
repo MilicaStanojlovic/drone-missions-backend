@@ -6,7 +6,7 @@ ALTER TABLE users ADD CONSTRAINT users_role_check
     CHECK (role IN ('DESIGNER', 'PILOT', 'ADMIN'));
 
 INSERT INTO users (username, email, password_hash, role, created_at, updated_at)
-VALUES ('admin', 'admin@drone-missions.local',
+    VALUES ('admin', 'admin@drone-missions.local',
         '$2a$10$ehC2h0QWFjOFsAmIRTyk8uRIVSNWLd4msESnuwuKkj.YIOim7zY1.',
         'ADMIN', now(), now())
 ON CONFLICT (email) DO NOTHING;
