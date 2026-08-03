@@ -4,7 +4,7 @@ import com.project.drone_missions.business.exception.mission.MissionNotFoundExce
 import com.project.drone_missions.business.exception.rating.AlreadyRatedException;
 import com.project.drone_missions.business.exception.rating.NotMissionParticipantException;
 import com.project.drone_missions.business.exception.rating.RatingNotYetAllowedException;
-import com.project.drone_missions.data.access.MissionDataAccess;
+import com.project.drone_missions.data.access.MissionDao;
 import com.project.drone_missions.data.model.Mission;
 import com.project.drone_missions.data.model.MissionStatus;
 import com.project.drone_missions.data.model.Rating;
@@ -25,7 +25,7 @@ import java.util.stream.Collectors;
 public class RatingService {
 
     private final RatingRepository ratingRepository;
-    private final MissionDataAccess missionDataAccess;
+    private final MissionDao missionDao;
     private final UserRepository userRepository;
 
     /**
@@ -34,7 +34,7 @@ public class RatingService {
      */
     public Rating create(Long missionId, Long raterId, Short score, String comment) {
         // Read-only: rating never writes the mission, so a cached copy is fine.
-        Mission mission = missionDataAccess.findById(missionId)
+        Mission mission = missionDao.findById(missionId)
                 .orElseThrow(() -> new MissionNotFoundException(missionId));
 
         if (mission.getStatus() != MissionStatus.COMPLETED) {
@@ -56,7 +56,7 @@ public class RatingService {
 
     /** Both ratings for a mission, so a participant can see whether they have rated yet. */
     public List<Rating> forMission(Long missionId, Long callerId) {
-        Mission mission = missionDataAccess.findById(missionId)
+        Mission mission = missionDao.findById(missionId)
                 .orElseThrow(() -> new MissionNotFoundException(missionId));
         requireParticipant(mission, callerId);
         return ratingRepository.findByMission_IdOrderByCreatedAtDesc(missionId);
