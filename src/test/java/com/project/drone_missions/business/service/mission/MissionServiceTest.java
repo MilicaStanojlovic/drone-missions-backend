@@ -2,7 +2,7 @@ package com.project.drone_missions.business.service.mission;
 
 import com.project.drone_missions.business.service.mail.EmailService;
 import com.project.drone_missions.business.service.notification.NotificationService;
-import com.project.drone_missions.data.access.MissionDataAccess;
+import com.project.drone_missions.data.access.MissionDao;
 import com.project.drone_missions.data.access.OpenMissionQuery;
 import com.project.drone_missions.data.model.MissionStatus;
 import com.project.drone_missions.data.repository.BidRepository;
@@ -34,7 +34,7 @@ import static org.mockito.Mockito.when;
 class MissionServiceTest {
 
     @Mock
-    private MissionDataAccess repository;
+    private MissionDao repository;
     @Mock
     private BidRepository bidRepository;
     @Mock

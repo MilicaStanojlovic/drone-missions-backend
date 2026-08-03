@@ -21,9 +21,9 @@ public interface MissionRepository extends JpaRepository<Mission, Long>, JpaSpec
     List<Mission> findByAwardedPilot_IdIsNotNullAndStatusInAndEndTimeBefore(
             Collection<MissionStatus> statuses, Instant endTime);
 
-    // The open-feed search is built dynamically as a Specification in JpaMissionDataAccess, so only
+    // The open-feed search is built dynamically as a Specification in JpaMissionDao, so only
     // the filters actually supplied become predicates — no null bind parameters reach SQL.
 
-    // Inject data.access.MissionDataAccess, not this interface: JpaMissionDataAccess is the only
+    // Inject data.access.MissionDao, not this interface: JpaMissionDao is the only
     // permitted consumer, so that the caching decorator observes every mission read and write.
 }

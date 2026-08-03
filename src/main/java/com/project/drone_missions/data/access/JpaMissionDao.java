@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * The database-backed {@link MissionDataAccess}. This is the only class in the application
+ * The database-backed {@link MissionDao}. This is the only class in the application
  * permitted to reference {@link MissionRepository}.
  *
  * <p>It holds no cache: {@link #findById} and {@link #findFresh} are the same query here, and
@@ -23,7 +23,7 @@ import java.util.Optional;
  */
 @Repository
 @AllArgsConstructor
-public class JpaMissionDataAccess implements MissionDataAccess {
+public class JpaMissionDao implements MissionDao {
 
     private final MissionRepository repository;
 

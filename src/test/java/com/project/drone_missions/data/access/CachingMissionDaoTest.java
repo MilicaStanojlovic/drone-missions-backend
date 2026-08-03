@@ -37,25 +37,25 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * Mockito over the {@link MissionDataAccess} <em>interface</em> — no Spring context and no
+ * Mockito over the {@link MissionDao} <em>interface</em> — no Spring context and no
  * database. Being able to write this at all is the testability argument for introducing the
  * layer, so the delegate is deliberately mocked as the interface rather than a repository.
  */
 @ExtendWith(MockitoExtension.class)
-class CachingMissionDataAccessTest {
+class CachingMissionDaoTest {
 
     private static final Clock CLOCK = Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), ZoneOffset.UTC);
     private static final MissionCacheProperties PROPS =
             new MissionCacheProperties(true, Duration.ofMinutes(5), 100, 50);
 
     @Mock
-    private MissionDataAccess delegate;
+    private MissionDao delegate;
 
-    private CachingMissionDataAccess cache;
+    private CachingMissionDao cache;
 
     @BeforeEach
     void setUp() {
-        cache = new CachingMissionDataAccess(delegate, PROPS, CLOCK);
+        cache = new CachingMissionDao(delegate, PROPS, CLOCK);
     }
 
     @AfterEach

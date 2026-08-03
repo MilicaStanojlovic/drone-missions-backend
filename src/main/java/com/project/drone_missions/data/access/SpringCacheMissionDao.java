@@ -17,8 +17,8 @@ import java.util.Optional;
 
 /**
  * Caches mission reads with Spring's cache abstraction — the framework-idiomatic twin of
- * {@link CachingMissionDataAccess}. Both implement {@link MissionDataAccess} and decorate
- * {@link JpaMissionDataAccess}; exactly one is active, chosen by the {@code cache-spring}
+ * {@link CachingMissionDao}. Both implement {@link MissionDao} and decorate
+ * {@link JpaMissionDao}; exactly one is active, chosen by the {@code cache-spring}
  * profile (see {@code config.SpringCacheConfig}). Nothing in {@code MissionService} or
  * {@code BidService} knows which one it is talking to.
  *
@@ -33,7 +33,7 @@ import java.util.Optional;
  * {@code @Cacheable} caches whatever the method returns, and reproducing the id-list indirection
  * would mean a second bean and self-invocation gymnastics for no gain in idiomatic form.
  *
- * <h2>How this differs from {@link CachingMissionDataAccess}</h2>
+ * <h2>How this differs from {@link CachingMissionDao}</h2>
  * These are the costs of staying idiomatic. None is a defect to fix here; they are the point of
  * the comparison.
  * <ul>
@@ -62,11 +62,11 @@ import java.util.Optional;
  * would bypass the cache entirely. Every method here goes straight to {@code delegate} — keep
  * it that way.
  *
- * <p>Shares the single-instance limitation documented on {@link CachingMissionDataAccess}: two
+ * <p>Shares the single-instance limitation documented on {@link CachingMissionDao}: two
  * JVMs would hold two Caffeine caches and neither would see the other's writes.
  */
 @Slf4j
-public class SpringCacheMissionDataAccess implements MissionDataAccess {
+public class SpringCacheMissionDao implements MissionDao {
 
     /** Mission id to entity. */
     public static final String MISSIONS = "missions";
@@ -74,10 +74,10 @@ public class SpringCacheMissionDataAccess implements MissionDataAccess {
     /** Query to the list of missions it returned. */
     public static final String MISSION_LISTS = "missionLists";
 
-    private final MissionDataAccess delegate;
+    private final MissionDao delegate;
     private final CacheManager cacheManager;
 
-    public SpringCacheMissionDataAccess(MissionDataAccess delegate, CacheManager cacheManager) {
+    public SpringCacheMissionDao(MissionDao delegate, CacheManager cacheManager) {
         this.delegate = delegate;
         this.cacheManager = cacheManager;
     }
@@ -104,7 +104,7 @@ public class SpringCacheMissionDataAccess implements MissionDataAccess {
 
     /**
      * {@code beforeInvocation = true} so the copy is dropped up front, matching
-     * {@link CachingMissionDataAccess#findFresh}. The default evicts only after a successful
+     * {@link CachingMissionDao#findFresh}. The default evicts only after a successful
      * return, which would both serve a stale copy to a concurrent reader while the caller
      * mutates, and leave the stale entry in place if the load throws.
      */
@@ -165,7 +165,7 @@ public class SpringCacheMissionDataAccess implements MissionDataAccess {
     // ---- observability ----
 
     /**
-     * Mirrors {@link CachingMissionDataAccess#sweepAndReport()} on the same schedule and with the
+     * Mirrors {@link CachingMissionDao#sweepAndReport()} on the same schedule and with the
      * same field names, so switching profiles produces comparable log lines. There is no actuator
      * on the classpath, so a log line is the only cache visibility either implementation has.
      *

@@ -1,8 +1,8 @@
 package com.project.drone_missions.config;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
-import com.project.drone_missions.data.access.JpaMissionDataAccess;
-import com.project.drone_missions.data.access.SpringCacheMissionDataAccess;
+import com.project.drone_missions.data.access.JpaMissionDao;
+import com.project.drone_missions.data.access.SpringCacheMissionDao;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -22,7 +22,7 @@ import java.util.List;
  *
  * <p>Selecting between them is a profile, not a property: {@code cache-spring} activates this
  * configuration and deactivates {@link MissionCacheConfig}, which carries the matching
- * {@code @Profile("!cache-spring")}. Exactly one {@code @Primary MissionDataAccess} therefore
+ * {@code @Profile("!cache-spring")}. Exactly one {@code @Primary MissionDao} therefore
  * exists in any context. With no profile set the application behaves exactly as it always has —
  * the hand-written cache is still the default.
  *
@@ -42,8 +42,8 @@ import java.util.List;
 @Slf4j
 @Configuration
 @Profile("cache-spring")
-// proxyTargetClass so the proxy is a subclass of SpringCacheMissionDataAccess rather than a JDK
-// proxy over MissionDataAccess. The stats reporter is @Scheduled and is not on the interface; a
+// proxyTargetClass so the proxy is a subclass of SpringCacheMissionDao rather than a JDK
+// proxy over MissionDao. The stats reporter is @Scheduled and is not on the interface; a
 // JDK proxy would not carry it and the scheduler could not invoke it.
 @EnableCaching(proxyTargetClass = true)
 @EnableConfigurationProperties(MissionCacheProperties.class)
@@ -58,7 +58,7 @@ public class SpringCacheConfig {
      * <p>Registered per cache rather than with one shared builder because the two have different
      * bounds: the list cache is smaller, its key space including a free-text keyword filter.
      * {@code recordStats()} is what makes the reporter on
-     * {@code SpringCacheMissionDataAccess#sweepAndReport()} possible — {@code @code} rather than
+     * {@code SpringCacheMissionDao#sweepAndReport()} possible — {@code @code} rather than
      * {@code @link} because that method is package-private in {@code data.access} and so is not
      * resolvable from this package.
      */
@@ -66,7 +66,7 @@ public class SpringCacheConfig {
     public CacheManager cacheManager(MissionCacheProperties properties) {
         CaffeineCacheManager manager = new CaffeineCacheManager();
 
-        // Absent missions are never cached (see SpringCacheMissionDataAccess#findById), so a null
+        // Absent missions are never cached (see SpringCacheMissionDao#findById), so a null
         // value reaching the cache would be a bug — fail loudly rather than store it.
         manager.setAllowNullValues(false);
         // Fixes the cache set: by default this manager is dynamic and mints a cache for any name
@@ -76,15 +76,15 @@ public class SpringCacheConfig {
         // Order matters and is not interchangeable: setCacheNames overwrites cacheMap entries with
         // default-configured caches, so it must come BEFORE the registrations below, which then
         // replace those defaults with the configured instances.
-        manager.setCacheNames(List.of(SpringCacheMissionDataAccess.MISSIONS,
-                SpringCacheMissionDataAccess.MISSION_LISTS));
-        manager.registerCustomCache(SpringCacheMissionDataAccess.MISSIONS,
+        manager.setCacheNames(List.of(SpringCacheMissionDao.MISSIONS,
+                SpringCacheMissionDao.MISSION_LISTS));
+        manager.registerCustomCache(SpringCacheMissionDao.MISSIONS,
                 Caffeine.newBuilder()
                         .expireAfterWrite(properties.ttl())
                         .maximumSize(properties.maxSize())
                         .recordStats()
                         .build());
-        manager.registerCustomCache(SpringCacheMissionDataAccess.MISSION_LISTS,
+        manager.registerCustomCache(SpringCacheMissionDao.MISSION_LISTS,
                 Caffeine.newBuilder()
                         .expireAfterWrite(properties.ttl())
                         .maximumSize(properties.listMaxSize())
@@ -94,7 +94,7 @@ public class SpringCacheConfig {
     }
 
     /**
-     * Injects the concrete {@link JpaMissionDataAccess} rather than the interface: it is
+     * Injects the concrete {@link JpaMissionDao} rather than the interface: it is
      * compile-time safe, needs no qualifier string, and cannot accidentally self-inject.
      *
      * <p>Keeps {@link MissionCacheConfig}'s {@code @ConditionalOnProperty} guard, so
@@ -110,11 +110,11 @@ public class SpringCacheConfig {
     @Primary
     @ConditionalOnProperty(prefix = "app.cache.mission", name = "enabled",
             havingValue = "true", matchIfMissing = true)
-    public SpringCacheMissionDataAccess springCacheMissionDataAccess(JpaMissionDataAccess delegate,
-                                                                    CacheManager cacheManager,
-                                                                    MissionCacheProperties properties) {
-        log.info("mission cache: SpringCacheMissionDataAccess (@Cacheable + Caffeine) ttl={} entities={} lists={}",
+    public SpringCacheMissionDao springCacheMissionDao(JpaMissionDao delegate,
+                                                         CacheManager cacheManager,
+                                                         MissionCacheProperties properties) {
+        log.info("mission cache: SpringCacheMissionDao (@Cacheable + Caffeine) ttl={} entities={} lists={}",
                 properties.ttl(), properties.maxSize(), properties.listMaxSize());
-        return new SpringCacheMissionDataAccess(delegate, cacheManager);
+        return new SpringCacheMissionDao(delegate, cacheManager);
     }
 }
