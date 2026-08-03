@@ -23,9 +23,14 @@ Start work on a ClickUp task.
    what is uncommitted instead of stashing or discarding anything.
 
 5. Check out develop, pull the latest, and create a branch named
-   feature/SLUG, where SLUG is the task name lowercased, with spaces
-   and punctuation replaced by hyphens, trimmed to about 50
-   characters. Show me the branch name before creating it.
+   feature/SLUG. Derive SLUG from what the task is about — the
+   domain concept, taken from the title and description together
+   (e.g. an admin-visibility task -> feature/admin-visibility) —
+   not from the title word for word. Never include team or layer
+   tags: drop things like [Backend]/[Frontend] and the words
+   backend/frontend themselves. Keep it lowercase kebab-case,
+   2-4 words, at most about 50 characters. Show me the proposed
+   name and wait for my approval before creating the branch.
 
 6. Record which ClickUp task this branch belongs to, so the PR hook
    can find it later:
