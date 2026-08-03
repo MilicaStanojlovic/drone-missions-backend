@@ -5,6 +5,7 @@ import com.project.drone_missions.data.model.MissionStatus;
 import com.project.drone_missions.data.repository.MissionRepository;
 import jakarta.persistence.criteria.Predicate;
 import lombok.AllArgsConstructor;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Repository;
 
@@ -80,6 +81,11 @@ public class JpaMissionDao implements MissionDao {
     @Override
     public List<Mission> findOverdue(Collection<MissionStatus> statuses, Instant endedBefore) {
         return repository.findByAwardedPilot_IdIsNotNullAndStatusInAndEndTimeBefore(statuses, endedBefore);
+    }
+
+    @Override
+    public List<Mission> findAll() {
+        return repository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"));
     }
 
     @Override
