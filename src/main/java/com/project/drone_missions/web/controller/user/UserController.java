@@ -14,6 +14,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 @RestController
 @AllArgsConstructor
 @RequestMapping("/api/v1/users")
@@ -21,6 +23,13 @@ public class UserController {
 
     private final UserService userService;
     private final UserMapper mapper;
+
+    /** Admin-only: every account, with email — the full response is the admin view. */
+    @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<UserResponse>> all() {
+        return ResponseEntity.ok(userService.findAll().stream().map(mapper::toResponse).toList());
+    }
 
     @GetMapping("/me")
     @PreAuthorize("isAuthenticated()")

@@ -126,6 +126,12 @@ public class CachingMissionDao implements MissionDao {
         return delegate.findOverdue(statuses, endedBefore);
     }
 
+    /** Not cached: a rare admin-only view is not worth widening the invalidation surface. */
+    @Override
+    public List<Mission> findAll() {
+        return delegate.findAll();
+    }
+
     // ---- writes ----
 
     @Override
