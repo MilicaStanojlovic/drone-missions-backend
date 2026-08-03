@@ -12,5 +12,7 @@ public enum UserRole {
     /** Defines the work and chooses who flies it. Creates and owns missions. */
     DESIGNER,
     /** Finds available work, bids on it, and carries it out. */
-    PILOT
+    PILOT,
+    /** Oversees the platform: sees every account and mission. Seeded, never self-registered. */
+    ADMIN
 }

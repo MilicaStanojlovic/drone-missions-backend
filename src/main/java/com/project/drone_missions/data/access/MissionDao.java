@@ -59,6 +59,9 @@ public interface MissionDao { // MissionDAO, @Cacheable Springova anotacija, par
     /** Awarded missions whose flight window has ended — the overdue scheduler's candidates. */
     List<Mission> findOverdue(Collection<MissionStatus> statuses, Instant endedBefore);
 
+    /** Every mission, any status or owner, newest first. Admin flows only — never cached. */
+    List<Mission> findAll();
+
     /** Persist a new or modified mission. Invalidates any cached copy. */
     Mission save(Mission mission);
 

@@ -12,6 +12,7 @@ import lombok.AllArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -72,13 +73,23 @@ public class MissionController {
         return ResponseEntity.created(location).body(toResponse(created));
     }
 
+    /** Admins get every mission regardless of status; the filters shape only the open feed. */
     @GetMapping
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<MissionResponse>> findAll(
             @RequestParam(required = false) String location,
             @RequestParam(required = false) String keyword,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            Authentication authentication) {
+        if (isAdmin(authentication)) {
+            return ResponseEntity.ok(toResponses(service.findAll()));
+        }
         return ResponseEntity.ok(toResponses(service.findOpen(location, keyword, date)));
+    }
+
+    private static boolean isAdmin(Authentication authentication) {
+        return authentication.getAuthorities().stream()
+                .anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()));
     }
 
     @GetMapping("/my-missions")

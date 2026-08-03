@@ -14,6 +14,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import org.springframework.security.authentication.TestingAuthenticationToken;
+import org.springframework.security.core.Authentication;
 
 import java.util.List;
 import java.util.Map;
@@ -22,6 +24,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -68,7 +72,23 @@ class MissionControllerTest {
     void theOpenFeedSurvivesAMissionWithNoOwner() {
         when(service.findOpen(null, null, null)).thenReturn(List.of(legacyMission()));
 
-        assertThatCode(() -> controller.findAll(null, null, null)).doesNotThrowAnyException();
+        assertThatCode(() -> controller.findAll(null, null, null, pilot())).doesNotThrowAnyException();
+    }
+
+    @Test
+    void adminGetsEveryMissionInsteadOfTheOpenFeed() {
+        when(service.findAll()).thenReturn(List.of(legacyMission()));
+
+        assertThat(controller.findAll(null, null, null, admin()).getBody()).hasSize(1);
+        verify(service, never()).findOpen(any(), any(), any());
+    }
+
+    private static Authentication pilot() {
+        return new TestingAuthenticationToken("7", null, "ROLE_PILOT");
+    }
+
+    private static Authentication admin() {
+        return new TestingAuthenticationToken("9", null, "ROLE_ADMIN");
     }
 
     @Test
