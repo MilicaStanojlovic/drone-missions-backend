@@ -14,6 +14,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import java.util.Optional;
 
@@ -48,6 +50,15 @@ class UserServiceTest {
         u.setRole(role);
         u.setSuspended(suspended);
         return u;
+    }
+
+    @Test
+    void searchDelegatesTheRoleFilterAndPageable() {
+        Pageable pageable = PageRequest.of(0, 20);
+
+        service.search(UserRole.PILOT, pageable);
+
+        verify(repository).search(UserRole.PILOT, pageable);
     }
 
     @Test
