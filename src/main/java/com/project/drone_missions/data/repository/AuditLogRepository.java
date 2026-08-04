@@ -14,23 +14,23 @@ import org.springframework.stereotype.Repository;
 public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
 
     /**
-     * Null filters mean "not filtering". {@code q} is unescaped (% and _ act as
-     * wildcards), matching the mission feed's keyword filter. The two LIKEs stay
-     * separate, not concat(username, details): details is nullable, and concat
-     * with null would drop rows whose username matches.
+     * Null filters mean "not filtering". {@code pattern} arrives pre-built by
+     * AuditService as a lowercase %…% LIKE pattern: lower(:param) here breaks on
+     * PostgreSQL, which can't type a null inside a function (lower(bytea)). Two
+     * LIKEs, not concat — details is nullable and concat would null out.
      */
     @Query("""
             select a from AuditLog a
             where (:actorId is null or a.actor.id = :actorId)
               and (:action is null or a.action = :action)
               and (:role is null or a.actorRole = :role)
-              and (:q is null
-                   or lower(a.actor.username) like concat('%', lower(:q), '%')
-                   or lower(a.details) like concat('%', lower(:q), '%'))
+              and (:pattern is null
+                   or lower(a.actor.username) like :pattern
+                   or lower(a.details) like :pattern)
             """)
     Page<AuditLog> search(@Param("actorId") Long actorId,
                           @Param("action") AuditAction action,
                           @Param("role") UserRole role,
-                          @Param("q") String q,
+                          @Param("pattern") String pattern,
                           Pageable pageable);
 }

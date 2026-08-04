@@ -56,13 +56,13 @@ class AuditServiceTest {
     }
 
     @Test
-    void blankSearchIsNormalizedToNullAndPaddedSearchIsTrimmed() {
+    void searchIsNormalizedToALowercasePatternAndBlankMeansEverything() {
         Pageable pageable = PageRequest.of(0, 20);
 
         service.search(null, null, null, "   ", pageable);
         verify(repository).search(null, null, null, null, pageable);
 
-        service.search(null, null, null, " orchard ", pageable);
-        verify(repository).search(null, null, null, "orchard", pageable);
+        service.search(null, null, null, " Orchard ", pageable);
+        verify(repository).search(null, null, null, "%orchard%", pageable);
     }
 }
