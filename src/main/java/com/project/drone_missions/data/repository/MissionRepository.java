@@ -5,6 +5,7 @@ import com.project.drone_missions.data.model.MissionModeration;
 import com.project.drone_missions.data.model.MissionStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
@@ -23,6 +24,16 @@ public interface MissionRepository extends JpaRepository<Mission, Long>, JpaSpec
     /** Awarded missions whose flight window has ended — the overdue scheduler's candidates. */
     List<Mission> findByAwardedPilot_IdIsNotNullAndStatusInAndEndTimeBeforeAndModerationNot(
             Collection<MissionStatus> statuses, Instant endTime, MissionModeration moderation);
+
+    @Query("select m.status as status, count(m) as total from Mission m group by m.status")
+    List<StatusCount> countByStatus();
+
+    /** Spring Data projection — keeps the aggregate typed instead of an Object[] row. */
+    interface StatusCount {
+        MissionStatus getStatus();
+
+        Long getTotal();
+    }
 
     // The open-feed search is built dynamically as a Specification in JpaMissionDao, so only
     // the filters actually supplied become predicates — no null bind parameters reach SQL.

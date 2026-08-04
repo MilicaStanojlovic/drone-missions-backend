@@ -14,6 +14,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -130,6 +131,12 @@ public class CachingMissionDao implements MissionDao {
     @Override
     public List<Mission> findAll() {
         return delegate.findAll();
+    }
+
+    /** Not cached: a rare admin-only stats view is not worth widening the invalidation surface. */
+    @Override
+    public Map<MissionStatus, Long> countByStatus() {
+        return delegate.countByStatus();
     }
 
     /**
