@@ -13,6 +13,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
@@ -51,5 +53,16 @@ class AuditServiceTest {
         assertThat(saved.getTargetType()).isEqualTo(AuditTargetType.MISSION);
         assertThat(saved.getTargetId()).isEqualTo(4L);
         assertThat(saved.getDetails()).isEqualTo("\"Orchard survey\"");
+    }
+
+    @Test
+    void blankSearchIsNormalizedToNullAndPaddedSearchIsTrimmed() {
+        Pageable pageable = PageRequest.of(0, 20);
+
+        service.search(null, null, null, "   ", pageable);
+        verify(repository).search(null, null, null, null, pageable);
+
+        service.search(null, null, null, " orchard ", pageable);
+        verify(repository).search(null, null, null, "orchard", pageable);
     }
 }
