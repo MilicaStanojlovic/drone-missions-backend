@@ -165,17 +165,12 @@ public class MissionController {
         return ResponseEntity.ok(toResponse(service.unhide(id, userId)));
     }
 
+    /** Permanent delete — 204 because the mission no longer exists to be returned. */
     @PostMapping("/{id}/remove")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<MissionResponse> remove(@PathVariable Long id,
-                                                  @AuthenticationPrincipal long userId) {
-        return ResponseEntity.ok(toResponse(service.remove(id, userId)));
-    }
-
-    @PostMapping("/{id}/restore")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<MissionResponse> restore(@PathVariable Long id,
-                                                   @AuthenticationPrincipal long userId) {
-        return ResponseEntity.ok(toResponse(service.restore(id, userId)));
+    public ResponseEntity<Void> remove(@PathVariable Long id,
+                                       @AuthenticationPrincipal long userId) {
+        service.remove(id, userId);
+        return ResponseEntity.noContent().build();
     }
 }

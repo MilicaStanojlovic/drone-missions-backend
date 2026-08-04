@@ -44,9 +44,9 @@ public class User {
     @Column(nullable = false, length = 32)
     private UserRole role;
 
-    // Null = active. Set by an admin suspension; doubles as the when-suspended audit mark.
-    @Column(name = "suspended_at")
-    private Instant suspendedAt;
+    // Set by an admin suspension; the when is in the USER_SUSPENDED audit row.
+    @Column(nullable = false)
+    private boolean suspended;
 
     @CreationTimestamp
     @Column(updatable = false)
@@ -54,8 +54,4 @@ public class User {
 
     @UpdateTimestamp
     private Instant updatedAt;
-
-    public boolean isSuspended() {
-        return suspendedAt != null;
-    }
 }

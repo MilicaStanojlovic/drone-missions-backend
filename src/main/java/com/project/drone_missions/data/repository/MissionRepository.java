@@ -1,7 +1,6 @@
 package com.project.drone_missions.data.repository;
 
 import com.project.drone_missions.data.model.Mission;
-import com.project.drone_missions.data.model.MissionModeration;
 import com.project.drone_missions.data.model.MissionStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
@@ -15,15 +14,15 @@ import java.util.List;
 @Repository
 public interface MissionRepository extends JpaRepository<Mission, Long>, JpaSpecificationExecutor<Mission> {
 
-    // REMOVED missions are withdrawn from the platform entirely, so the owner and
-    // awarded-pilot lists exclude them; HIDDEN only affects the open feed.
-    List<Mission> findByDesigner_IdAndModerationNot(Long userId, MissionModeration moderation);
+    // HIDDEN only affects the open feed, so the owner and awarded-pilot lists
+    // need no moderation filter; admin removal is a real delete, not a state.
+    List<Mission> findByDesigner_Id(Long userId);
 
-    List<Mission> findByAwardedPilot_IdAndModerationNot(Long awardedPilotId, MissionModeration moderation);
+    List<Mission> findByAwardedPilot_Id(Long awardedPilotId);
 
     /** Awarded missions whose flight window has ended — the overdue scheduler's candidates. */
-    List<Mission> findByAwardedPilot_IdIsNotNullAndStatusInAndEndTimeBeforeAndModerationNot(
-            Collection<MissionStatus> statuses, Instant endTime, MissionModeration moderation);
+    List<Mission> findByAwardedPilot_IdIsNotNullAndStatusInAndEndTimeBefore(
+            Collection<MissionStatus> statuses, Instant endTime);
 
     @Query("select m.status as status, count(m) as total from Mission m group by m.status")
     List<StatusCount> countByStatus();
