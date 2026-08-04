@@ -14,6 +14,7 @@ public enum AuditAction {
     MISSION_HIDDEN,
     MISSION_UNHIDDEN,
     MISSION_REMOVED,
+    /** No longer produced (removal is a hard delete now); kept so historical rows deserialize. */
     MISSION_RESTORED,
     BID_PLACED,
     BID_WITHDRAWN,

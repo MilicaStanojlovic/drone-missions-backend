@@ -255,21 +255,12 @@ public class MissionService {
         return mission;
     }
 
-    public Mission remove(Long id, Long adminId) { // TODO iz baze
+    /** Admin removal is a real delete — bids, notifications and ratings cascade;
+     *  only the audit row keeps the history. */
+    public void remove(Long id, Long adminId) {
         Mission mission = getFreshOrThrow(id);
-        if (mission.getModeration() == MissionModeration.REMOVED) {
-            throw new MissionConflictException("Mission %d is already removed".formatted(id));
-        }
-        mission.setModeration(MissionModeration.REMOVED);
-        Mission saved = missionDao.save(mission);
-        auditService.record(NewAuditEntry.missionRemoved(adminId, saved));
-        return saved;
-    }
-
-    public Mission restore(Long id, Long adminId) {
-        Mission mission = moderate(id, MissionModeration.REMOVED, MissionModeration.VISIBLE);
-        auditService.record(NewAuditEntry.missionRestored(adminId, mission));
-        return mission;
+        missionDao.delete(mission);
+        auditService.record(NewAuditEntry.missionRemoved(adminId, mission));
     }
 
     private Mission moderate(Long id, MissionModeration from, MissionModeration to) {
@@ -283,11 +274,8 @@ public class MissionService {
     }
 
     /** Visible to its owner, to the awarded pilot, or to anyone once it is open for work.
-     *  A REMOVED mission is invisible to everyone; the feed also requires an unsuspended designer. */
+     *  The feed also requires an unsuspended designer. */
     private boolean isVisibleTo(Mission mission, Long currentUserId) {
-        if (mission.getModeration() == MissionModeration.REMOVED) {
-            return false;
-        }
         if (currentUserId.equals(mission.getDesignerId())
                 || currentUserId.equals(mission.getAwardedPilotId())) {
             return true;

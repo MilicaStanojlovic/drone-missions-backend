@@ -80,18 +80,18 @@ public class JpaMissionDao implements MissionDao {
 
     @Override
     public List<Mission> findByUserId(Long userId) {
-        return repository.findByDesigner_IdAndModerationNot(userId, MissionModeration.REMOVED);
+        return repository.findByDesigner_Id(userId);
     }
 
     @Override
     public List<Mission> findByAwardedPilotId(Long pilotId) {
-        return repository.findByAwardedPilot_IdAndModerationNot(pilotId, MissionModeration.REMOVED);
+        return repository.findByAwardedPilot_Id(pilotId);
     }
 
     @Override
     public List<Mission> findOverdue(Collection<MissionStatus> statuses, Instant endedBefore) {
-        return repository.findByAwardedPilot_IdIsNotNullAndStatusInAndEndTimeBeforeAndModerationNot(
-                statuses, endedBefore, MissionModeration.REMOVED);
+        return repository.findByAwardedPilot_IdIsNotNullAndStatusInAndEndTimeBefore(
+                statuses, endedBefore);
     }
 
     /** No cache here, so nothing to drop. */
