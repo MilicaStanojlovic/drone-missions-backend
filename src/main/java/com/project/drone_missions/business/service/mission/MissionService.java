@@ -21,6 +21,8 @@ import com.project.drone_missions.data.model.User;
 import com.project.drone_missions.data.repository.BidRepository;
 import com.project.drone_missions.data.repository.UserRepository;
 import lombok.AllArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -94,8 +96,10 @@ public class MissionService {
         return value == null || value.isBlank() ? null : value.trim().toLowerCase();
     }
 
-    public List<Mission> findAll() {
-        return missionDao.findAll();
+    /** The admin listing; blank q means "everything". Pattern built here, not in SQL. */
+    public Page<Mission> searchAll(String q, Pageable pageable) {
+        String pattern = q == null || q.isBlank() ? null : "%" + q.trim().toLowerCase() + "%";
+        return missionDao.searchAll(pattern, pageable);
     }
 
     /** The missions the caller created and owns. */

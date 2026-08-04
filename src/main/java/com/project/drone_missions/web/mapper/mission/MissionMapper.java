@@ -39,6 +39,7 @@ public class MissionMapper {
                 mission.getDesignerId(),
                 designer == null ? null : designer.getEmail(),
                 designer == null ? null : designer.getUsername(),
+                designer != null && designer.isSuspended(),
                 designerRating.average(),
                 designerRating.count(),
                 mission.getAwardedPilotId(),

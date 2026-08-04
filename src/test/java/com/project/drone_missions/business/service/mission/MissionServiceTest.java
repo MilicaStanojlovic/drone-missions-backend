@@ -14,6 +14,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -22,8 +24,8 @@ import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 /**
  * {@link MissionService#findOpen} builds the {@link OpenMissionQuery} that both cache
@@ -52,7 +54,8 @@ class MissionServiceTest {
     @BeforeEach
     void setUp() {
         service = new MissionService(repository, bidRepository, userRepository, notificationService, emailService, auditService);
-        when(repository.findOpen(any())).thenReturn(List.of());
+        // Lenient: the admin-search test never touches the feed.
+        lenient().when(repository.findOpen(any())).thenReturn(List.of());
     }
 
     @Test
@@ -99,6 +102,17 @@ class MissionServiceTest {
 
         assertThat(capturedQuery().statuses())
                 .isEqualTo(Set.of(MissionStatus.PUBLISHED, MissionStatus.BIDDING));
+    }
+
+    @Test
+    void adminSearchBuildsALowercasePatternAndBlankMeansEverything() {
+        Pageable pageable = PageRequest.of(0, 20);
+
+        service.searchAll("   ", pageable);
+        verify(repository).searchAll(null, pageable);
+
+        service.searchAll(" Orchard ", pageable);
+        verify(repository).searchAll("%orchard%", pageable);
     }
 
     private OpenMissionQuery capturedQuery() {
