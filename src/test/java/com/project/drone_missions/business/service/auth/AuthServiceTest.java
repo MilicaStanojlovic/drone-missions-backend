@@ -1,6 +1,7 @@
 package com.project.drone_missions.business.service.auth;
 
 import com.project.drone_missions.business.exception.auth.AdminRegistrationNotAllowedException;
+import com.project.drone_missions.business.exception.auth.EmailAlreadyExistsException;
 import com.project.drone_missions.business.exception.auth.InvalidCredentialsException;
 import com.project.drone_missions.business.service.audit.AuditService;
 import com.project.drone_missions.business.service.audit.NewAuditEntry;
@@ -91,6 +92,36 @@ class AuthServiceTest {
         verify(auditService).record(captor.capture());
         assertThat(captor.getValue().action()).isEqualTo(AuditAction.USER_LOGGED_IN);
         assertThat(captor.getValue().actorId()).isEqualTo(3L);
+    }
+
+    @Test
+    void createAdminMintsAnAdminAndRecordsTheCreatorAsActor() {
+        when(passwordEncoder.encode("pw-long-enough")).thenReturn("hash");
+        when(userRepository.save(any(User.class))).thenAnswer(i -> {
+            User u = i.getArgument(0);
+            u.setId(4L);
+            return u;
+        });
+
+        User created = service.createAdmin("second-admin", "admin2@example.com", "pw-long-enough", 80L);
+
+        assertThat(created.getRole()).isEqualTo(UserRole.ADMIN);
+        assertThat(created.getPasswordHash()).isEqualTo("hash");
+        ArgumentCaptor<NewAuditEntry> captor = ArgumentCaptor.forClass(NewAuditEntry.class);
+        verify(auditService).record(captor.capture());
+        assertThat(captor.getValue().action()).isEqualTo(AuditAction.ADMIN_CREATED);
+        assertThat(captor.getValue().actorId()).isEqualTo(80L);
+        assertThat(captor.getValue().targetId()).isEqualTo(4L);
+    }
+
+    @Test
+    void createAdminRejectsADuplicateEmailWithoutSavingOrRecording() {
+        when(userRepository.existsByEmail("taken@example.com")).thenReturn(true);
+
+        assertThatThrownBy(() -> service.createAdmin("x", "taken@example.com", "pw-long-enough", 80L))
+                .isInstanceOf(EmailAlreadyExistsException.class);
+        verify(userRepository, never()).save(any());
+        verify(auditService, never()).record(any());
     }
 
     @Test
