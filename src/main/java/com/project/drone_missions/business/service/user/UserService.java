@@ -11,7 +11,6 @@ import com.project.drone_missions.data.repository.UserRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -53,7 +52,7 @@ public class UserService {
             throw new AdminCannotBeSuspendedException(id);
         }
         if (!user.isSuspended()) {
-            user.setSuspendedAt(Instant.now()); // TODO boolean
+            user.setSuspended(true);
             repository.save(user);
             missionDao.invalidateLists();
             auditService.record(NewAuditEntry.userSuspended(adminId, user));
@@ -64,7 +63,7 @@ public class UserService {
     public User reactivate(Long id, Long adminId) {
         User user = findById(id);
         if (user.isSuspended()) {
-            user.setSuspendedAt(null);
+            user.setSuspended(false);
             repository.save(user);
             missionDao.invalidateLists();
             auditService.record(NewAuditEntry.userReactivated(adminId, user));

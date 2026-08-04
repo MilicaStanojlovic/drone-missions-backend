@@ -16,11 +16,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     boolean existsByEmail(String email);
 
-    /** Null suspendedAt = active. */
-    long countByRoleAndSuspendedAtIsNull(UserRole role);
+    long countByRoleAndSuspendedFalse(UserRole role);
 
     /** Suspended accounts across every role. */
-    long countBySuspendedAtIsNotNull();
+    long countBySuspendedTrue();
 
     @Query("select u.role as role, count(u) as total from User u group by u.role")
     List<RoleCount> countByRole();

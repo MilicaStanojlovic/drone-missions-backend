@@ -60,7 +60,7 @@ class MissionServiceModerationTest {
     private static User user(Long id, boolean suspended) {
         User u = new User();
         u.setId(id);
-        u.setSuspendedAt(suspended ? Instant.now() : null);
+        u.setSuspended(suspended);
         return u;
     }
 
