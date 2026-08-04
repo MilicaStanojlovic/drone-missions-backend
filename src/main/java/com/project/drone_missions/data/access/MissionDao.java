@@ -6,6 +6,7 @@ import com.project.drone_missions.data.model.MissionStatus;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -61,6 +62,13 @@ public interface MissionDao { // MissionDAO, @Cacheable Springova anotacija, par
 
     /** Every mission, any status or owner, newest first. Admin flows only — never cached. */
     List<Mission> findAll();
+
+    /**
+     * Mission counts grouped by status — sparse: statuses with no rows are absent, not zero.
+     * No moderation filter, so the stats agree with {@link #findAll()} (admins see
+     * everything). Admin flows only — never cached.
+     */
+    Map<MissionStatus, Long> countByStatus();
 
     /**
      * Drop every cached list. For moderation events that change feed membership
