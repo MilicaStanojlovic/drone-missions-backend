@@ -114,10 +114,10 @@ class PlatformStatsServiceTest {
     @Test
     void activePilotsCountsExactlyTheUnsuspendedPilotRole() {
         when(missionDao.countByStatus()).thenReturn(Map.of());
-        when(userRepository.countByRoleAndSuspendedAtIsNull(UserRole.PILOT)).thenReturn(7L);
+        when(userRepository.countByRoleAndSuspendedFalse(UserRole.PILOT)).thenReturn(7L);
 
         assertThat(service.overview().activePilots()).isEqualTo(7L);
-        verify(userRepository).countByRoleAndSuspendedAtIsNull(UserRole.PILOT);
+        verify(userRepository).countByRoleAndSuspendedFalse(UserRole.PILOT);
     }
 
     @Test
@@ -135,7 +135,7 @@ class PlatformStatsServiceTest {
     void sparseRoleCountsAreZeroFilledToAllRoles() {
         when(missionDao.countByStatus()).thenReturn(Map.of());
         when(userRepository.countByRole()).thenReturn(List.of(roleCount(UserRole.PILOT, 31L)));
-        when(userRepository.countBySuspendedAtIsNotNull()).thenReturn(3L);
+        when(userRepository.countBySuspendedTrue()).thenReturn(3L);
 
         PlatformStats stats = service.overview();
 

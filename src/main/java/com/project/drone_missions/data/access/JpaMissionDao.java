@@ -56,7 +56,7 @@ public class JpaMissionDao implements MissionDao {
             predicates.add(cb.equal(root.get("moderation"), MissionModeration.VISIBLE));
             predicates.add(cb.or(
                     cb.isNull(root.get("designer")),
-                    cb.isNull(root.get("designer").get("suspendedAt"))));
+                    cb.isFalse(root.get("designer").get("suspended"))));
             if (query.location() != null) {
                 predicates.add(cb.like(cb.lower(root.<String>get("location")),
                         "%" + query.location().toLowerCase() + "%"));
