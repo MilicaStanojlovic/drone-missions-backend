@@ -3,6 +3,8 @@ package com.project.drone_missions.business.service.auth;
 import com.project.drone_missions.business.exception.auth.AdminRegistrationNotAllowedException;
 import com.project.drone_missions.business.exception.auth.EmailAlreadyExistsException;
 import com.project.drone_missions.business.exception.auth.InvalidCredentialsException;
+import com.project.drone_missions.business.service.audit.AuditService;
+import com.project.drone_missions.business.service.audit.NewAuditEntry;
 import com.project.drone_missions.data.model.User;
 import com.project.drone_missions.data.model.UserRole;
 import com.project.drone_missions.data.repository.UserRepository;
@@ -40,6 +42,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtEncoder jwtEncoder;
+    private final AuditService auditService;
 
     @Value("${security.jwt.expiration-ms}")
     private long jwtExpirationMs;
@@ -49,7 +52,7 @@ public class AuthService {
      * @throws AdminRegistrationNotAllowedException if the requested role is ADMIN
      */
     public User createUser(String username, String email, String rawPassword, UserRole role) {
-        if (role == UserRole.ADMIN) {
+        if (role == UserRole.ADMIN) {  // typescript linters, plugins, subagents TODO
             throw new AdminRegistrationNotAllowedException();
         }
         if (userRepository.existsByEmail(email)) {
@@ -60,7 +63,9 @@ public class AuthService {
         user.setEmail(email);
         user.setPasswordHash(passwordEncoder.encode(rawPassword));
         user.setRole(role);
-        return userRepository.save(user);
+        User saved = userRepository.save(user);
+        auditService.record(NewAuditEntry.userRegistered(saved));
+        return saved;
     }
 
     /**
@@ -76,6 +81,7 @@ public class AuthService {
             throw new InvalidCredentialsException();
         }
         User user = ((UserPrincipal) authentication.getPrincipal()).getUser();
+        auditService.record(NewAuditEntry.userLoggedIn(user));
         return new LoginResult(generateToken(user), user);
     }
 

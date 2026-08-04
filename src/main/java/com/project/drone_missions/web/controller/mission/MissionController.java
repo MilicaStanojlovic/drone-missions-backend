@@ -151,31 +151,31 @@ public class MissionController {
         return ResponseEntity.ok(toResponse(service.cancel(id, userId)));
     }
 
-    /** Admin: pull the mission from the pilot feed (reversible). */
     @PostMapping("/{id}/hide")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<MissionResponse> hide(@PathVariable Long id) {
-        return ResponseEntity.ok(toResponse(service.hide(id)));
+    public ResponseEntity<MissionResponse> hide(@PathVariable Long id,
+                                                @AuthenticationPrincipal long userId) {
+        return ResponseEntity.ok(toResponse(service.hide(id, userId)));
     }
 
-    /** Admin: return a hidden mission to the feed. */
     @PostMapping("/{id}/unhide")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<MissionResponse> unhide(@PathVariable Long id) {
-        return ResponseEntity.ok(toResponse(service.unhide(id)));
+    public ResponseEntity<MissionResponse> unhide(@PathVariable Long id,
+                                                  @AuthenticationPrincipal long userId) {
+        return ResponseEntity.ok(toResponse(service.unhide(id, userId)));
     }
 
-    /** Admin: withdraw the mission from the platform entirely (reversible, not a delete). */
     @PostMapping("/{id}/remove")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<MissionResponse> remove(@PathVariable Long id) {
-        return ResponseEntity.ok(toResponse(service.remove(id)));
+    public ResponseEntity<MissionResponse> remove(@PathVariable Long id,
+                                                  @AuthenticationPrincipal long userId) {
+        return ResponseEntity.ok(toResponse(service.remove(id, userId)));
     }
 
-    /** Admin: bring a removed mission back as visible. */
     @PostMapping("/{id}/restore")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<MissionResponse> restore(@PathVariable Long id) {
-        return ResponseEntity.ok(toResponse(service.restore(id)));
+    public ResponseEntity<MissionResponse> restore(@PathVariable Long id,
+                                                   @AuthenticationPrincipal long userId) {
+        return ResponseEntity.ok(toResponse(service.restore(id, userId)));
     }
 }

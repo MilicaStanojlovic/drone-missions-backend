@@ -5,6 +5,8 @@ import com.project.drone_missions.business.exception.mission.MissionConflictExce
 import com.project.drone_missions.business.exception.mission.MissionNotFoundException;
 import com.project.drone_missions.business.exception.user.UserNotFoundException;
 import com.project.drone_missions.business.exception.user.UserSuspendedException;
+import com.project.drone_missions.business.service.audit.AuditService;
+import com.project.drone_missions.business.service.audit.NewAuditEntry;
 import com.project.drone_missions.business.service.mail.EmailService;
 import com.project.drone_missions.business.service.notification.NewNotification;
 import com.project.drone_missions.business.service.notification.NotificationService;
@@ -46,6 +48,7 @@ public class MissionService {
     private final UserRepository userRepository;
     private final NotificationService notificationService;
     private final EmailService emailService;
+    private final AuditService auditService;
 
     /** Ownership is set here, not in the controller, which has no business holding a repository. */
     public Mission create(Mission mission, Long designerId) {
@@ -55,7 +58,9 @@ public class MissionService {
             throw new UserSuspendedException();
         }
         mission.setDesigner(designer);
-        return missionDao.save(mission);
+        Mission saved = missionDao.save(mission);
+        auditService.record(NewAuditEntry.missionCreated(designerId, saved));
+        return saved;
     }
 
     /**
@@ -89,7 +94,6 @@ public class MissionService {
         return value == null || value.isBlank() ? null : value.trim().toLowerCase();
     }
 
-    /** Every mission on the platform, unfiltered. Whether the caller may ask is the web layer's call. */
     public List<Mission> findAll() {
         return missionDao.findAll();
     }
@@ -122,7 +126,9 @@ public class MissionService {
                     "Mission %d cannot be started from status %s".formatted(id, mission.getStatus()));
         }
         mission.setStatus(MissionStatus.IN_PROGRESS);
-        return missionDao.save(mission);
+        Mission saved = missionDao.save(mission);
+        auditService.record(NewAuditEntry.missionStarted(pilotId, saved));
+        return saved;
     }
 
     /**
@@ -144,7 +150,9 @@ public class MissionService {
                     "Mission %d cannot be completed from status %s".formatted(id, mission.getStatus()));
         }
         mission.setStatus(MissionStatus.COMPLETED);
-        return missionDao.save(mission);
+        Mission saved = missionDao.save(mission);
+        auditService.record(NewAuditEntry.missionCompleted(pilotId, saved));
+        return saved;
     }
 
     /**
@@ -178,6 +186,7 @@ public class MissionService {
             userRepository.findById(pilotId)
                     .ifPresent(pilot -> emailService.sendMissionCancelled(pilot, mission));
         }
+        auditService.record(NewAuditEntry.missionCancelled(designerId, mission));
         return mission;
     }
 
@@ -210,13 +219,16 @@ public class MissionService {
         mission.setGeofence(changes.getGeofence());
         // status is intentionally not modified on update — a mission's
         // lifecycle status is never changed by an edit.
-        return missionDao.save(mission);
+        Mission saved = missionDao.save(mission);
+        auditService.record(NewAuditEntry.missionUpdated(currentUserId, saved));
+        return saved;
     }
 
     public void delete(Long id, Long currentUserId) {
         Mission mission = getFreshOrThrow(id);
         requireOwner(mission, currentUserId);
         missionDao.delete(mission);
+        auditService.record(NewAuditEntry.missionDeleted(currentUserId, mission));
     }
 
     /** Read-only lookup — may be served from cache, so never hand the result to save(). */
@@ -231,31 +243,33 @@ public class MissionService {
                 .orElseThrow(() -> new MissionNotFoundException(id));
     }
 
-    // ---- admin moderation ----
-
-    /** Admin: pull the mission from the pilot feed; the designer keeps it. */
-    public Mission hide(Long id) {
-        return moderate(id, MissionModeration.VISIBLE, MissionModeration.HIDDEN);
+    public Mission hide(Long id, Long adminId) {
+        Mission mission = moderate(id, MissionModeration.VISIBLE, MissionModeration.HIDDEN);
+        auditService.record(NewAuditEntry.missionHidden(adminId, mission));
+        return mission;
     }
 
-    /** Admin: return a hidden mission to the feed. */
-    public Mission unhide(Long id) {
-        return moderate(id, MissionModeration.HIDDEN, MissionModeration.VISIBLE);
+    public Mission unhide(Long id, Long adminId) {
+        Mission mission = moderate(id, MissionModeration.HIDDEN, MissionModeration.VISIBLE);
+        auditService.record(NewAuditEntry.missionUnhidden(adminId, mission));
+        return mission;
     }
 
-    /** Admin: withdraw the mission from the platform entirely, owner included. Reversible. */
-    public Mission remove(Long id) {
+    public Mission remove(Long id, Long adminId) { // TODO iz baze
         Mission mission = getFreshOrThrow(id);
         if (mission.getModeration() == MissionModeration.REMOVED) {
             throw new MissionConflictException("Mission %d is already removed".formatted(id));
         }
         mission.setModeration(MissionModeration.REMOVED);
-        return missionDao.save(mission);
+        Mission saved = missionDao.save(mission);
+        auditService.record(NewAuditEntry.missionRemoved(adminId, saved));
+        return saved;
     }
 
-    /** Admin: bring a removed mission back as visible. */
-    public Mission restore(Long id) {
-        return moderate(id, MissionModeration.REMOVED, MissionModeration.VISIBLE);
+    public Mission restore(Long id, Long adminId) {
+        Mission mission = moderate(id, MissionModeration.REMOVED, MissionModeration.VISIBLE);
+        auditService.record(NewAuditEntry.missionRestored(adminId, mission));
+        return mission;
     }
 
     private Mission moderate(Long id, MissionModeration from, MissionModeration to) {

@@ -25,7 +25,7 @@ public class UserController {
     private final UserService userService;
     private final UserMapper mapper;
 
-    /** Admin-only: every account, with email — the full response is the admin view. */
+    /** Full UserResponse (with email) on purpose — this is the admin view. */
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<UserResponse>> all() {
@@ -45,17 +45,17 @@ public class UserController {
         return ResponseEntity.ok(mapper.toPublicResponse(userService.findById(id)));
     }
 
-    /** Admin: suspend the account — blocks designing, bidding, awards, and execution. */
     @PostMapping("/{id}/suspend")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<UserResponse> suspend(@PathVariable Long id) {
-        return ResponseEntity.ok(mapper.toResponse(userService.suspend(id)));
+    public ResponseEntity<UserResponse> suspend(@PathVariable Long id,
+                                                @AuthenticationPrincipal long userId) {
+        return ResponseEntity.ok(mapper.toResponse(userService.suspend(id, userId)));
     }
 
-    /** Admin: lift a suspension. */
     @PostMapping("/{id}/reactivate")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<UserResponse> reactivate(@PathVariable Long id) {
-        return ResponseEntity.ok(mapper.toResponse(userService.reactivate(id)));
+    public ResponseEntity<UserResponse> reactivate(@PathVariable Long id,
+                                                   @AuthenticationPrincipal long userId) {
+        return ResponseEntity.ok(mapper.toResponse(userService.reactivate(id, userId)));
     }
 }

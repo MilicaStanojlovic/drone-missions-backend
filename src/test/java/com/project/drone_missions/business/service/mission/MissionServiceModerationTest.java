@@ -2,9 +2,12 @@ package com.project.drone_missions.business.service.mission;
 
 import com.project.drone_missions.business.exception.mission.MissionConflictException;
 import com.project.drone_missions.business.exception.user.UserSuspendedException;
+import com.project.drone_missions.business.service.audit.AuditService;
+import com.project.drone_missions.business.service.audit.NewAuditEntry;
 import com.project.drone_missions.business.service.mail.EmailService;
 import com.project.drone_missions.business.service.notification.NotificationService;
 import com.project.drone_missions.data.access.MissionDao;
+import com.project.drone_missions.data.model.AuditAction;
 import com.project.drone_missions.data.model.Mission;
 import com.project.drone_missions.data.model.MissionModeration;
 import com.project.drone_missions.data.model.MissionStatus;
@@ -14,6 +17,7 @@ import com.project.drone_missions.data.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -41,12 +45,14 @@ class MissionServiceModerationTest {
     private NotificationService notificationService;
     @Mock
     private EmailService emailService;
+    @Mock
+    private AuditService auditService;
 
     private MissionService service;
 
     @BeforeEach
     void setUp() {
-        service = new MissionService(missionDao, bidRepository, userRepository, notificationService, emailService);
+        service = new MissionService(missionDao, bidRepository, userRepository, notificationService, emailService, auditService);
     }
 
     private static User user(Long id, boolean suspended) {
@@ -71,6 +77,7 @@ class MissionServiceModerationTest {
         assertThatThrownBy(() -> service.create(new Mission(), 7L))
                 .isInstanceOf(UserSuspendedException.class);
         verify(missionDao, never()).save(any());
+        verify(auditService, never()).record(any());
     }
 
     @Test
@@ -94,12 +101,18 @@ class MissionServiceModerationTest {
     }
 
     @Test
-    void hideMovesVisibleToHidden() {
+    void hideMovesVisibleToHiddenAndRecordsTheAdmin() {
         Mission mission = mission(MissionStatus.PUBLISHED, MissionModeration.VISIBLE);
         when(missionDao.findFresh(1L)).thenReturn(Optional.of(mission));
         when(missionDao.save(mission)).thenReturn(mission);
 
-        assertThat(service.hide(1L).getModeration()).isEqualTo(MissionModeration.HIDDEN);
+        assertThat(service.hide(1L, 9L).getModeration()).isEqualTo(MissionModeration.HIDDEN);
+
+        ArgumentCaptor<NewAuditEntry> captor = ArgumentCaptor.forClass(NewAuditEntry.class);
+        verify(auditService).record(captor.capture());
+        assertThat(captor.getValue().actorId()).isEqualTo(9L);
+        assertThat(captor.getValue().action()).isEqualTo(AuditAction.MISSION_HIDDEN);
+        assertThat(captor.getValue().targetId()).isEqualTo(1L);
     }
 
     @Test
@@ -107,7 +120,8 @@ class MissionServiceModerationTest {
         when(missionDao.findFresh(1L))
                 .thenReturn(Optional.of(mission(MissionStatus.PUBLISHED, MissionModeration.HIDDEN)));
 
-        assertThatThrownBy(() -> service.hide(1L)).isInstanceOf(MissionConflictException.class);
+        assertThatThrownBy(() -> service.hide(1L, 9L)).isInstanceOf(MissionConflictException.class);
+        verify(auditService, never()).record(any());
     }
 
     @Test
@@ -116,7 +130,11 @@ class MissionServiceModerationTest {
         when(missionDao.findFresh(1L)).thenReturn(Optional.of(mission));
         when(missionDao.save(mission)).thenReturn(mission);
 
-        assertThat(service.remove(1L).getModeration()).isEqualTo(MissionModeration.REMOVED);
+        assertThat(service.remove(1L, 9L).getModeration()).isEqualTo(MissionModeration.REMOVED);
+
+        ArgumentCaptor<NewAuditEntry> captor = ArgumentCaptor.forClass(NewAuditEntry.class);
+        verify(auditService).record(captor.capture());
+        assertThat(captor.getValue().action()).isEqualTo(AuditAction.MISSION_REMOVED);
     }
 
     @Test
@@ -124,7 +142,8 @@ class MissionServiceModerationTest {
         when(missionDao.findFresh(1L))
                 .thenReturn(Optional.of(mission(MissionStatus.PUBLISHED, MissionModeration.REMOVED)));
 
-        assertThatThrownBy(() -> service.remove(1L)).isInstanceOf(MissionConflictException.class);
+        assertThatThrownBy(() -> service.remove(1L, 9L)).isInstanceOf(MissionConflictException.class);
+        verify(auditService, never()).record(any());
     }
 
     @Test
@@ -132,6 +151,7 @@ class MissionServiceModerationTest {
         when(missionDao.findFresh(1L))
                 .thenReturn(Optional.of(mission(MissionStatus.PUBLISHED, MissionModeration.VISIBLE)));
 
-        assertThatThrownBy(() -> service.restore(1L)).isInstanceOf(MissionConflictException.class);
+        assertThatThrownBy(() -> service.restore(1L, 9L)).isInstanceOf(MissionConflictException.class);
+        verify(auditService, never()).record(any());
     }
 }
