@@ -11,6 +11,9 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 
 import java.time.Clock;
 import java.time.Instant;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -129,8 +132,8 @@ public class CachingMissionDao implements MissionDao {
 
     /** Not cached: a rare admin-only view is not worth widening the invalidation surface. */
     @Override
-    public List<Mission> findAll() {
-        return delegate.findAll();
+    public Page<Mission> searchAll(String pattern, Pageable pageable) {
+        return delegate.searchAll(pattern, pageable);
     }
 
     /** Not cached: a rare admin-only stats view is not worth widening the invalidation surface. */

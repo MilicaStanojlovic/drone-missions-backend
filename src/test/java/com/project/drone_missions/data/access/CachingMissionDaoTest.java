@@ -12,6 +12,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
@@ -279,6 +281,16 @@ class CachingMissionDaoTest {
         cache.countByStatus();
 
         verify(delegate, times(2)).countByStatus();
+    }
+
+    @Test
+    void adminSearchIsNotCached() {
+        when(delegate.searchAll(any(), any())).thenReturn(Page.empty());
+
+        cache.searchAll(null, PageRequest.of(0, 20));
+        cache.searchAll(null, PageRequest.of(0, 20));
+
+        verify(delegate, times(2)).searchAll(any(), any());
     }
 
     // ---- transaction synchronisation ----
