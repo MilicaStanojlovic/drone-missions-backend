@@ -1,9 +1,12 @@
 package com.project.drone_missions.business.service.audit;
 
+import com.project.drone_missions.data.model.AuditAction;
 import com.project.drone_missions.data.model.AuditLog;
 import com.project.drone_missions.data.repository.AuditLogRepository;
 import com.project.drone_missions.data.repository.UserRepository;
 import lombok.AllArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 /**
@@ -27,5 +30,10 @@ public class AuditService {
         log.setTargetId(entry.targetId());
         log.setDetails(entry.details());
         return repository.save(log);
+    }
+
+    /** The admin listing; null filters mean "everything". */
+    public Page<AuditLog> search(Long actorId, AuditAction action, Pageable pageable) {
+        return repository.search(actorId, action, pageable);
     }
 }
