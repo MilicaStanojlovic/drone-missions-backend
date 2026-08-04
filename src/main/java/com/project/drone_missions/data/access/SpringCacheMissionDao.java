@@ -13,6 +13,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -147,6 +148,12 @@ public class SpringCacheMissionDao implements MissionDao {
     @Override
     public List<Mission> findAll() {
         return delegate.findAll();
+    }
+
+    /** Not cached, for the same reasons as {@link CachingMissionDao#countByStatus()}. */
+    @Override
+    public Map<MissionStatus, Long> countByStatus() {
+        return delegate.countByStatus();
     }
 
     /** Feed membership changed without a mission write — matches {@link CachingMissionDao#invalidateLists()}. */
