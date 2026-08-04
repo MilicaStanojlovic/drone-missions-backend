@@ -14,6 +14,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -56,6 +57,16 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.<Void>builder()
                         .status(HttpStatus.BAD_REQUEST)
                         .message("Invalid value for parameter '%s'".formatted(exception.getName()))
+                        .build());
+    }
+
+    /** A URL no handler serves -> 404, not the 500 catch-all. */
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ErrorResponse<Void>> handleNoRoute(NoResourceFoundException exception) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ErrorResponse.<Void>builder()
+                        .status(HttpStatus.NOT_FOUND)
+                        .message("No such resource")
                         .build());
     }
 
