@@ -13,6 +13,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -44,6 +45,17 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.<Void>builder()
                         .status(HttpStatus.BAD_REQUEST)
                         .message("Malformed or unreadable request body")
+                        .build());
+    }
+
+    /** A query/path parameter of the wrong type (e.g. an unknown enum value) -> 400, not 500. */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse<Void>> handleTypeMismatch(
+            MethodArgumentTypeMismatchException exception) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ErrorResponse.<Void>builder()
+                        .status(HttpStatus.BAD_REQUEST)
+                        .message("Invalid value for parameter '%s'".formatted(exception.getName()))
                         .build());
     }
 
