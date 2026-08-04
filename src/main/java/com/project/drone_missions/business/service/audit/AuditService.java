@@ -33,10 +33,14 @@ public class AuditService {
         return repository.save(log);
     }
 
-    /** The admin listing; null/blank filters mean "everything". */
+    /**
+     * The admin listing; null/blank filters mean "everything". The LIKE pattern
+     * is lowercased here, not in the query — see AuditLogRepository. q is
+     * unescaped (% and _ act as wildcards), like the mission feed's keyword.
+     */
     public Page<AuditLog> search(Long actorId, AuditAction action, UserRole role,
                                  String q, Pageable pageable) {
-        String query = q == null || q.isBlank() ? null : q.trim();
-        return repository.search(actorId, action, role, query, pageable);
+        String pattern = q == null || q.isBlank() ? null : "%" + q.trim().toLowerCase() + "%";
+        return repository.search(actorId, action, role, pattern, pageable);
     }
 }
