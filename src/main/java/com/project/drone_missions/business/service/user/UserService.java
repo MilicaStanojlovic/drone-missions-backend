@@ -28,7 +28,6 @@ public class UserService {
         return repository.findByEmail(email);
     }
 
-    /** Every account on the platform — the admin roster. */
     public List<User> findAll() {
         return repository.findAll();
     }
@@ -42,9 +41,8 @@ public class UserService {
     }
 
     /**
-     * Admin: suspend the account. Idempotent. Mission feed lists are invalidated
-     * because a suspended designer's missions leave the marketplace without any
-     * mission row being written.
+     * Feed lists are invalidated because a suspended designer's missions leave
+     * the marketplace without any mission row being written.
      */
     public User suspend(Long id) {
         User user = findById(id);
@@ -59,7 +57,6 @@ public class UserService {
         return user;
     }
 
-    /** Admin: lift a suspension. Idempotent; the counterpart of {@link #suspend}. */
     public User reactivate(Long id) {
         User user = findById(id);
         if (user.isSuspended()) {

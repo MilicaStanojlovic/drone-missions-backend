@@ -89,7 +89,6 @@ public class MissionService {
         return value == null || value.isBlank() ? null : value.trim().toLowerCase();
     }
 
-    /** Every mission on the platform, unfiltered. Whether the caller may ask is the web layer's call. */
     public List<Mission> findAll() {
         return missionDao.findAll();
     }
@@ -231,19 +230,14 @@ public class MissionService {
                 .orElseThrow(() -> new MissionNotFoundException(id));
     }
 
-    // ---- admin moderation ----
-
-    /** Admin: pull the mission from the pilot feed; the designer keeps it. */
     public Mission hide(Long id) {
         return moderate(id, MissionModeration.VISIBLE, MissionModeration.HIDDEN);
     }
 
-    /** Admin: return a hidden mission to the feed. */
     public Mission unhide(Long id) {
         return moderate(id, MissionModeration.HIDDEN, MissionModeration.VISIBLE);
     }
 
-    /** Admin: withdraw the mission from the platform entirely, owner included. Reversible. */
     public Mission remove(Long id) {
         Mission mission = getFreshOrThrow(id);
         if (mission.getModeration() == MissionModeration.REMOVED) {
@@ -253,7 +247,6 @@ public class MissionService {
         return missionDao.save(mission);
     }
 
-    /** Admin: bring a removed mission back as visible. */
     public Mission restore(Long id) {
         return moderate(id, MissionModeration.REMOVED, MissionModeration.VISIBLE);
     }
