@@ -21,6 +21,9 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import java.time.Instant;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -354,6 +357,16 @@ class SpringCacheMissionDaoTest {
         cache.countByStatus();
 
         verify(delegate, times(2)).countByStatus();
+    }
+
+    @Test
+    void adminSearchIsNotCached() {
+        when(delegate.searchAll(any(), any())).thenReturn(Page.empty());
+
+        cache.searchAll(null, PageRequest.of(0, 20));
+        cache.searchAll(null, PageRequest.of(0, 20));
+
+        verify(delegate, times(2)).searchAll(any(), any());
     }
 
     // ---- observability ----

@@ -9,10 +9,15 @@ import com.project.drone_missions.web.dto.mission.MissionResponse;
 import com.project.drone_missions.web.mapper.mission.MissionMapper;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
+import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.data.web.PagedModel;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -73,23 +78,28 @@ public class MissionController {
         return ResponseEntity.created(location).body(toResponse(created));
     }
 
-    /** Admins get every mission regardless of status; the filters shape only the open feed. */
+    /** The open marketplace; the admin listing lives at /all. */
     @GetMapping
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<MissionResponse>> findAll(
             @RequestParam(required = false) String location,
             @RequestParam(required = false) String keyword,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
-            Authentication authentication) {
-        if (isAdmin(authentication)) {
-            return ResponseEntity.ok(toResponses(service.findAll()));
-        }
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         return ResponseEntity.ok(toResponses(service.findOpen(location, keyword, date)));
     }
 
-    private static boolean isAdmin(Authentication authentication) {
-        return authentication.getAuthorities().stream()
-                .anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()));
+    /** Every mission regardless of status, paged, optionally narrowed by name/designer. */
+    @GetMapping("/all")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<PagedModel<MissionResponse>> adminList(
+            @RequestParam(required = false) String q,
+            @ParameterObject @PageableDefault(size = 20, sort = "createdAt",
+                    direction = Sort.Direction.DESC) Pageable pageable) {
+        Page<Mission> page = service.searchAll(q, pageable);
+        Map<Long, RatingSummary> ratings = ratingService.summariesFor(
+                page.getContent().stream().map(Mission::getDesignerId).toList());
+        return ResponseEntity.ok(new PagedModel<>(
+                page.map(m -> mapper.toResponse(m, ratingOf(ratings, m.getDesignerId())))));
     }
 
     @GetMapping("/my-missions")

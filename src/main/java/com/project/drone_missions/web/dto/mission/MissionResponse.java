@@ -18,6 +18,7 @@ public record MissionResponse(
         Long userId,
         String designerEmail,
         String designerName,
+        boolean designerSuspended,
         double designerRating,
         long designerRatingCount,
         Long awardedPilotId,
