@@ -63,10 +63,6 @@ public record NewAuditEntry(Long actorId, UserRole actorRole, AuditAction action
         return mission(adminId, UserRole.ADMIN, AuditAction.MISSION_REMOVED, mission);
     }
 
-    public static NewAuditEntry missionRestored(Long adminId, Mission mission) {
-        return mission(adminId, UserRole.ADMIN, AuditAction.MISSION_RESTORED, mission);
-    }
-
     /** {@code updated} — place() upserts, and "raised an existing bid" is worth telling apart. */
     public static NewAuditEntry bidPlaced(Long pilotId, Bid bid, boolean updated) {
         return new NewAuditEntry(pilotId, UserRole.PILOT, AuditAction.BID_PLACED,

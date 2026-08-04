@@ -50,8 +50,6 @@ class NewAuditEntryTest {
                 .isEqualTo(AuditAction.MISSION_UNHIDDEN);
         assertThat(NewAuditEntry.missionRemoved(9L, mission()).action())
                 .isEqualTo(AuditAction.MISSION_REMOVED);
-        assertThat(NewAuditEntry.missionRestored(9L, mission()).action())
-                .isEqualTo(AuditAction.MISSION_RESTORED);
     }
 
     @Test
