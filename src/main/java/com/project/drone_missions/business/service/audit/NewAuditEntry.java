@@ -2,7 +2,9 @@ package com.project.drone_missions.business.service.audit;
 
 import com.project.drone_missions.data.model.AuditAction;
 import com.project.drone_missions.data.model.AuditTargetType;
+import com.project.drone_missions.data.model.Bid;
 import com.project.drone_missions.data.model.Mission;
+import com.project.drone_missions.data.model.Rating;
 import com.project.drone_missions.data.model.User;
 import com.project.drone_missions.data.model.UserRole;
 
@@ -65,6 +67,42 @@ public record NewAuditEntry(Long actorId, UserRole actorRole, AuditAction action
         return mission(adminId, UserRole.ADMIN, AuditAction.MISSION_RESTORED, mission);
     }
 
+    /** {@code updated} — place() upserts, and "raised an existing bid" is worth telling apart. */
+    public static NewAuditEntry bidPlaced(Long pilotId, Bid bid, boolean updated) {
+        return new NewAuditEntry(pilotId, UserRole.PILOT, AuditAction.BID_PLACED,
+                AuditTargetType.BID, bid.getId(),
+                "%s on %s%s".formatted(bid.getAmount(), quoted(bid.getMission().getName()),
+                        updated ? " (updated)" : ""));
+    }
+
+    public static NewAuditEntry bidWithdrawn(Long pilotId, Bid bid) {
+        return new NewAuditEntry(pilotId, UserRole.PILOT, AuditAction.BID_WITHDRAWN,
+                AuditTargetType.BID, bid.getId(),
+                "%s on %s".formatted(bid.getAmount(), quoted(bid.getMission().getName())));
+    }
+
+    public static NewAuditEntry bidAccepted(Long designerId, Bid bid) {
+        return new NewAuditEntry(designerId, UserRole.DESIGNER, AuditAction.BID_ACCEPTED,
+                AuditTargetType.BID, bid.getId(),
+                "%s on %s".formatted(bid.getAmount(), quoted(bid.getMission().getName())));
+    }
+
+    public static NewAuditEntry userRegistered(User user) {
+        return self(user, AuditAction.USER_REGISTERED);
+    }
+
+    public static NewAuditEntry userLoggedIn(User user) {
+        return self(user, AuditAction.USER_LOGGED_IN);
+    }
+
+    /** The rater's role is derived: a mission's rater is either its designer or its pilot. */
+    public static NewAuditEntry ratingCreated(Long raterId, Mission mission, Rating rating) {
+        UserRole role = raterId.equals(mission.getDesignerId()) ? UserRole.DESIGNER : UserRole.PILOT;
+        return new NewAuditEntry(raterId, role, AuditAction.RATING_CREATED,
+                AuditTargetType.RATING, rating.getId(),
+                "%d/5 on %s".formatted(rating.getScore(), quoted(mission.getName())));
+    }
+
     public static NewAuditEntry userSuspended(Long adminId, User target) {
         return new NewAuditEntry(adminId, UserRole.ADMIN, AuditAction.USER_SUSPENDED,
                 AuditTargetType.USER, target.getId(), quoted(target.getUsername()));
@@ -73,6 +111,11 @@ public record NewAuditEntry(Long actorId, UserRole actorRole, AuditAction action
     public static NewAuditEntry userReactivated(Long adminId, User target) {
         return new NewAuditEntry(adminId, UserRole.ADMIN, AuditAction.USER_REACTIVATED,
                 AuditTargetType.USER, target.getId(), quoted(target.getUsername()));
+    }
+
+    private static NewAuditEntry self(User user, AuditAction action) {
+        return new NewAuditEntry(user.getId(), user.getRole(), action,
+                AuditTargetType.USER, user.getId(), quoted(user.getUsername()));
     }
 
     private static NewAuditEntry mission(Long actorId, UserRole role, AuditAction action,
