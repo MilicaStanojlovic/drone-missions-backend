@@ -23,7 +23,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.Instant;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -54,7 +53,8 @@ class MissionServiceModerationTest {
 
     @BeforeEach
     void setUp() {
-        service = new MissionService(missionDao, bidRepository, userRepository, notificationService, emailService, auditService);
+        service = new MissionService(missionDao, bidRepository, userRepository, notificationService, emailService,
+                auditService);
     }
 
     private static User user(Long id, boolean suspended) {
