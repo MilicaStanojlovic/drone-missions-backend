@@ -6,6 +6,8 @@ import com.project.drone_missions.business.exception.mission.MissionAccessDenied
 import com.project.drone_missions.business.exception.mission.MissionNotFoundException;
 import com.project.drone_missions.business.exception.user.UserNotFoundException;
 import com.project.drone_missions.business.exception.user.UserSuspendedException;
+import com.project.drone_missions.business.service.audit.AuditService;
+import com.project.drone_missions.business.service.audit.NewAuditEntry;
 import com.project.drone_missions.business.service.mail.EmailService;
 import com.project.drone_missions.business.service.mail.NewBidEmail;
 import com.project.drone_missions.business.service.notification.NewNotification;
@@ -41,13 +43,14 @@ public class BidService {
     private final UserRepository userRepository;
     private final NotificationService notificationService;
     private final EmailService emailService;
+    private final AuditService auditService;
 
     /**
      * Place the caller's bid on a mission, or update it if a pending one already
      * exists (one bid per pilot per mission). The first bid on a PUBLISHED
      * mission flips it to BIDDING so the lifecycle reflects real activity.
      */
-    public Bid place(Long missionId, Long pilotId, BigDecimal amount, String message) {
+    public Bid place(Long missionId, Long pilotId, BigDecimal amount, String message) { // TODO 4 parameters
         // Fresh, not cached: the first bid on a PUBLISHED mission writes it back as BIDDING.
         Mission mission = getFreshMissionOrThrow(missionId);
         // A moderated mission, or one whose designer is suspended, must be
@@ -84,6 +87,7 @@ public class BidService {
             throw new BidConflictException(
                     "Bid %d has already been decided and cannot be changed".formatted(bid.getId()));
         }
+        boolean updated = bid.getId() != null;
         bid.setAmount(amount);
         bid.setMessage(message);
         Bid saved = bidRepository.save(bid);
@@ -99,6 +103,7 @@ public class BidService {
         if (designer != null) {
             emailService.sendNewBid(new NewBidEmail(designer, mission, pilotName, amount, message));
         }
+        auditService.record(NewAuditEntry.bidPlaced(pilotId, saved, updated));
         return saved;
     }
 
@@ -137,6 +142,7 @@ public class BidService {
                     "Bid %d has already been decided and cannot be withdrawn".formatted(bidId));
         }
         bidRepository.delete(bid);
+        auditService.record(NewAuditEntry.bidWithdrawn(pilotId, bid));
     }
 
     /**
@@ -183,6 +189,7 @@ public class BidService {
 
         notifyDecision(mission, bid, true);
         losers.forEach(loser -> notifyDecision(mission, loser, false));
+        auditService.record(NewAuditEntry.bidAccepted(designerId, bid));
         return bid;
     }
 

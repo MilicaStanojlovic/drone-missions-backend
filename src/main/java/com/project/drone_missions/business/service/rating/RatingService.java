@@ -4,6 +4,8 @@ import com.project.drone_missions.business.exception.mission.MissionNotFoundExce
 import com.project.drone_missions.business.exception.rating.AlreadyRatedException;
 import com.project.drone_missions.business.exception.rating.NotMissionParticipantException;
 import com.project.drone_missions.business.exception.rating.RatingNotYetAllowedException;
+import com.project.drone_missions.business.service.audit.AuditService;
+import com.project.drone_missions.business.service.audit.NewAuditEntry;
 import com.project.drone_missions.data.access.MissionDao;
 import com.project.drone_missions.data.model.Mission;
 import com.project.drone_missions.data.model.MissionStatus;
@@ -27,6 +29,7 @@ public class RatingService {
     private final RatingRepository ratingRepository;
     private final MissionDao missionDao;
     private final UserRepository userRepository;
+    private final AuditService auditService;
 
     /**
      * The mission row is the only membership record there is, so it answers both "may this
@@ -51,7 +54,9 @@ public class RatingService {
         rating.setRatee(userRepository.getReferenceById(counterpartOf(mission, raterId)));
         rating.setScore(score);
         rating.setComment(comment);
-        return ratingRepository.save(rating);
+        Rating saved = ratingRepository.save(rating);
+        auditService.record(NewAuditEntry.ratingCreated(raterId, mission, saved));
+        return saved;
     }
 
     /** Both ratings for a mission, so a participant can see whether they have rated yet. */

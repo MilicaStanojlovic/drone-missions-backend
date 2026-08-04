@@ -1,5 +1,6 @@
 package com.project.drone_missions.business.service.mission;
 
+import com.project.drone_missions.business.service.audit.AuditService;
 import com.project.drone_missions.business.service.mail.EmailService;
 import com.project.drone_missions.business.service.notification.NotificationService;
 import com.project.drone_missions.data.access.MissionDao;
@@ -43,12 +44,14 @@ class MissionServiceTest {
     private NotificationService notificationService;
     @Mock
     private EmailService emailService;
+    @Mock
+    private AuditService auditService;
 
     private MissionService service;
 
     @BeforeEach
     void setUp() {
-        service = new MissionService(repository, bidRepository, userRepository, notificationService, emailService);
+        service = new MissionService(repository, bidRepository, userRepository, notificationService, emailService, auditService);
         when(repository.findOpen(any())).thenReturn(List.of());
     }
 

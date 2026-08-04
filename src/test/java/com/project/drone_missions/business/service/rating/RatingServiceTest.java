@@ -4,6 +4,8 @@ import com.project.drone_missions.business.exception.mission.MissionNotFoundExce
 import com.project.drone_missions.business.exception.rating.AlreadyRatedException;
 import com.project.drone_missions.business.exception.rating.NotMissionParticipantException;
 import com.project.drone_missions.business.exception.rating.RatingNotYetAllowedException;
+import com.project.drone_missions.business.service.audit.AuditService;
+import com.project.drone_missions.business.service.audit.NewAuditEntry;
 import com.project.drone_missions.data.access.MissionDao;
 import com.project.drone_missions.data.model.Mission;
 import com.project.drone_missions.data.model.MissionStatus;
@@ -47,11 +49,14 @@ class RatingServiceTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private AuditService auditService;
+
     private RatingService service;
 
     @BeforeEach
     void setUp() {
-        service = new RatingService(ratingRepository, missionDao, userRepository);
+        service = new RatingService(ratingRepository, missionDao, userRepository, auditService);
         lenient().when(userRepository.getReferenceById(any(Long.class)))
                 .thenAnswer(i -> user(i.getArgument(0)));
     }
@@ -104,10 +109,19 @@ class RatingServiceTest {
         return captor.getValue();
     }
 
+    /** Mirrors the DB: the saved row comes back with an identity id. */
+    private void givenSaveAssignsId() {
+        when(ratingRepository.save(any(Rating.class))).thenAnswer(i -> {
+            Rating r = i.getArgument(0);
+            r.setId(11L);
+            return r;
+        });
+    }
+
     @Test
     void designerRatingResolvesToTheAwardedPilot() {
         givenMission(completedMission());
-        when(ratingRepository.save(any(Rating.class))).thenAnswer(i -> i.getArgument(0));
+        givenSaveAssignsId();
 
         service.create(MISSION_ID, DESIGNER_ID, (short) 5, "great flying");
 
@@ -121,13 +135,37 @@ class RatingServiceTest {
     @Test
     void pilotRatingResolvesToTheDesigner() {
         givenMission(completedMission());
-        when(ratingRepository.save(any(Rating.class))).thenAnswer(i -> i.getArgument(0));
+        givenSaveAssignsId();
 
         service.create(MISSION_ID, PILOT_ID, (short) 4, null);
 
         Rating saved = captureSaved();
         assertThat(saved.getRater().getId()).isEqualTo(PILOT_ID);
         assertThat(saved.getRatee().getId()).isEqualTo(DESIGNER_ID);
+    }
+
+    @Test
+    void creatingARatingRecordsTheRaterWithTheirDerivedRole() {
+        givenMission(completedMission());
+        givenSaveAssignsId();
+
+        service.create(MISSION_ID, DESIGNER_ID, (short) 5, null);
+
+        var captor = org.mockito.ArgumentCaptor.forClass(NewAuditEntry.class);
+        verify(auditService).record(captor.capture());
+        assertThat(captor.getValue().actorId()).isEqualTo(DESIGNER_ID);
+        assertThat(captor.getValue().actorRole())
+                .isEqualTo(com.project.drone_missions.data.model.UserRole.DESIGNER);
+        assertThat(captor.getValue().targetId()).isEqualTo(11L);
+    }
+
+    @Test
+    void aRejectedRatingRecordsNothing() {
+        givenMission(missionWith(MissionStatus.IN_PROGRESS));
+
+        assertThatThrownBy(() -> service.create(MISSION_ID, PILOT_ID, (short) 5, null))
+                .isInstanceOf(RatingNotYetAllowedException.class);
+        verify(auditService, never()).record(any());
     }
 
     @Test

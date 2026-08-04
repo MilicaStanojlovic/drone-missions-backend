@@ -2,6 +2,8 @@ package com.project.drone_missions.business.service.user;
 
 import com.project.drone_missions.business.exception.user.AdminCannotBeSuspendedException;
 import com.project.drone_missions.business.exception.user.UserNotFoundException;
+import com.project.drone_missions.business.service.audit.AuditService;
+import com.project.drone_missions.business.service.audit.NewAuditEntry;
 import com.project.drone_missions.data.access.MissionDao;
 import com.project.drone_missions.data.model.User;
 import com.project.drone_missions.data.model.UserRole;
@@ -23,12 +25,12 @@ public class UserService {
 
     private final UserRepository repository;
     private final MissionDao missionDao;
+    private final AuditService auditService;
 
     public Optional<User> findByEmail(String email) {
         return repository.findByEmail(email);
     }
 
-    /** Every account on the platform — the admin roster. */
     public List<User> findAll() {
         return repository.findAll();
     }
@@ -42,30 +44,30 @@ public class UserService {
     }
 
     /**
-     * Admin: suspend the account. Idempotent. Mission feed lists are invalidated
-     * because a suspended designer's missions leave the marketplace without any
-     * mission row being written.
+     * Feed lists are invalidated because a suspended designer's missions leave
+     * the marketplace without any mission row being written.
      */
-    public User suspend(Long id) {
+    public User suspend(Long id, Long adminId) { // TODO project root xml check style, pre commit hooks.. identacija npr, parametri komentari
         User user = findById(id);
         if (user.getRole() == UserRole.ADMIN) {
             throw new AdminCannotBeSuspendedException(id);
         }
         if (!user.isSuspended()) {
-            user.setSuspendedAt(Instant.now());
+            user.setSuspendedAt(Instant.now()); // TODO boolean
             repository.save(user);
             missionDao.invalidateLists();
+            auditService.record(NewAuditEntry.userSuspended(adminId, user));
         }
         return user;
     }
 
-    /** Admin: lift a suspension. Idempotent; the counterpart of {@link #suspend}. */
-    public User reactivate(Long id) {
+    public User reactivate(Long id, Long adminId) {
         User user = findById(id);
         if (user.isSuspended()) {
             user.setSuspendedAt(null);
             repository.save(user);
             missionDao.invalidateLists();
+            auditService.record(NewAuditEntry.userReactivated(adminId, user));
         }
         return user;
     }
