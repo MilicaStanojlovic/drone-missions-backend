@@ -47,13 +47,15 @@ public class UserController {
 
     @PostMapping("/{id}/suspend")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<UserResponse> suspend(@PathVariable Long id) {
-        return ResponseEntity.ok(mapper.toResponse(userService.suspend(id)));
+    public ResponseEntity<UserResponse> suspend(@PathVariable Long id,
+                                                @AuthenticationPrincipal long userId) {
+        return ResponseEntity.ok(mapper.toResponse(userService.suspend(id, userId)));
     }
 
     @PostMapping("/{id}/reactivate")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<UserResponse> reactivate(@PathVariable Long id) {
-        return ResponseEntity.ok(mapper.toResponse(userService.reactivate(id)));
+    public ResponseEntity<UserResponse> reactivate(@PathVariable Long id,
+                                                   @AuthenticationPrincipal long userId) {
+        return ResponseEntity.ok(mapper.toResponse(userService.reactivate(id, userId)));
     }
 }

@@ -153,25 +153,29 @@ public class MissionController {
 
     @PostMapping("/{id}/hide")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<MissionResponse> hide(@PathVariable Long id) {
-        return ResponseEntity.ok(toResponse(service.hide(id)));
+    public ResponseEntity<MissionResponse> hide(@PathVariable Long id,
+                                                @AuthenticationPrincipal long userId) {
+        return ResponseEntity.ok(toResponse(service.hide(id, userId)));
     }
 
     @PostMapping("/{id}/unhide")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<MissionResponse> unhide(@PathVariable Long id) {
-        return ResponseEntity.ok(toResponse(service.unhide(id)));
+    public ResponseEntity<MissionResponse> unhide(@PathVariable Long id,
+                                                  @AuthenticationPrincipal long userId) {
+        return ResponseEntity.ok(toResponse(service.unhide(id, userId)));
     }
 
     @PostMapping("/{id}/remove")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<MissionResponse> remove(@PathVariable Long id) {
-        return ResponseEntity.ok(toResponse(service.remove(id)));
+    public ResponseEntity<MissionResponse> remove(@PathVariable Long id,
+                                                  @AuthenticationPrincipal long userId) {
+        return ResponseEntity.ok(toResponse(service.remove(id, userId)));
     }
 
     @PostMapping("/{id}/restore")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<MissionResponse> restore(@PathVariable Long id) {
-        return ResponseEntity.ok(toResponse(service.restore(id)));
+    public ResponseEntity<MissionResponse> restore(@PathVariable Long id,
+                                                   @AuthenticationPrincipal long userId) {
+        return ResponseEntity.ok(toResponse(service.restore(id, userId)));
     }
 }
