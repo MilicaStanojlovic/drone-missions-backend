@@ -109,6 +109,12 @@ public record NewAuditEntry(Long actorId, UserRole actorRole, AuditAction action
                 AuditTargetType.USER, target.getId(), quoted(target.getUsername()));
     }
 
+    /** Actor is the creating admin, not the new account — unlike self-actored registration. */
+    public static NewAuditEntry adminCreated(Long adminId, User newAdmin) {
+        return new NewAuditEntry(adminId, UserRole.ADMIN, AuditAction.ADMIN_CREATED,
+                AuditTargetType.USER, newAdmin.getId(), quoted(newAdmin.getUsername()));
+    }
+
     private static NewAuditEntry self(User user, AuditAction action) {
         return new NewAuditEntry(user.getId(), user.getRole(), action,
                 AuditTargetType.USER, user.getId(), quoted(user.getUsername()));

@@ -69,6 +69,25 @@ public class AuthService {
     }
 
     /**
+     * An authenticated admin creates another admin — the only way past the
+     * self-registration guard above. Audited with the creator as the actor.
+     * @throws EmailAlreadyExistsException if the email is already registered
+     */
+    public User createAdmin(String username, String email, String rawPassword, Long creatorAdminId) {
+        if (userRepository.existsByEmail(email)) {
+            throw new EmailAlreadyExistsException(email);
+        }
+        User user = new User();
+        user.setUsername(username);
+        user.setEmail(email);
+        user.setPasswordHash(passwordEncoder.encode(rawPassword));
+        user.setRole(UserRole.ADMIN);
+        User saved = userRepository.save(user);
+        auditService.record(NewAuditEntry.adminCreated(creatorAdminId, saved));
+        return saved;
+    }
+
+    /**
      * @throws InvalidCredentialsException if the email is unknown or the password is wrong
      */
     public LoginResult login(String email, String rawPassword) {

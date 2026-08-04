@@ -23,5 +23,6 @@ public enum AuditAction {
     USER_LOGGED_IN,
     USER_SUSPENDED,
     USER_REACTIVATED,
+    ADMIN_CREATED,
     RATING_CREATED
 }

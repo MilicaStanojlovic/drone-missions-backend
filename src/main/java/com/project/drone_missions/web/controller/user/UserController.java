@@ -1,17 +1,22 @@
 package com.project.drone_missions.web.controller.user;
 
+import com.project.drone_missions.business.service.auth.AuthService;
 import com.project.drone_missions.business.service.user.UserService;
 import com.project.drone_missions.security.UserPrincipal;
 import com.project.drone_missions.web.dto.auth.UserResponse;
+import com.project.drone_missions.web.dto.user.NewAdminRequest;
 import com.project.drone_missions.web.dto.user.PublicUserResponse;
 import com.project.drone_missions.web.mapper.user.UserMapper;
+import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -23,6 +28,7 @@ import java.util.List;
 public class UserController {
 
     private final UserService userService;
+    private final AuthService authService;
     private final UserMapper mapper;
 
     /** Full UserResponse (with email) on purpose — this is the admin view. */
@@ -43,6 +49,15 @@ public class UserController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<PublicUserResponse> byId(@PathVariable Long id) {
         return ResponseEntity.ok(mapper.toPublicResponse(userService.findById(id)));
+    }
+
+    /** An admin registers another admin — the only path that can mint one at runtime. */
+    @PostMapping("/admins")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<UserResponse> createAdmin(@Valid @RequestBody NewAdminRequest request,
+                                                    @AuthenticationPrincipal long userId) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(mapper.toResponse(
+                authService.createAdmin(request.username(), request.email(), request.password(), userId)));
     }
 
     @PostMapping("/{id}/suspend")
