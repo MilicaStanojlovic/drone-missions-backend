@@ -3,7 +3,6 @@ package com.project.drone_missions.web.controller.user;
 import com.project.drone_missions.business.service.auth.AuthService;
 import com.project.drone_missions.business.service.user.UserService;
 import com.project.drone_missions.data.model.UserRole;
-import com.project.drone_missions.security.UserPrincipal;
 import com.project.drone_missions.web.dto.auth.UserResponse;
 import com.project.drone_missions.web.dto.user.NewAdminRequest;
 import com.project.drone_missions.web.dto.user.PublicUserResponse;

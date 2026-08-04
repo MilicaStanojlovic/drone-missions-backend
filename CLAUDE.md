@@ -31,6 +31,10 @@ mvnw.cmd test "-Dtest=ClassName#methodName"           # Run a single test method
 
 Note: `mvnw.cmd test` boots the full Spring context (`@SpringBootTest`), which requires a reachable PostgreSQL instance — see below.
 
+## Code style (Checkstyle)
+
+Checkstyle enforces naming conventions, formatting basics (no tabs, line length ≤ 120), and import hygiene — config is `checkstyle.xml` at the project root. It runs in the `validate` phase, so **any** `mvnw.cmd test`/`package`/`verify` fails on a violation before compiling; run it alone with `mvnw.cmd checkstyle:check` (details in `target/checkstyle-result.xml`). A pre-commit hook in `.githooks/` runs the same check when staged changes include Java files — activate it once per clone with `git config core.hooksPath .githooks`. `MethodName` is suppressed for `data/repository` because Spring Data derived queries use `_` for property traversal.
+
 ## Database
 
 Requires a PostgreSQL database named `drone-missions` on `localhost:5432` (user/password `postgres`/`postgres`), configured in `src/main/resources/application.properties`. `show-sql=true` logs generated SQL.
