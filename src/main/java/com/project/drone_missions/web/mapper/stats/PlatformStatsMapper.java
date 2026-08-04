@@ -12,6 +12,11 @@ public class PlatformStatsMapper {
                 stats.missionsByStatus(),
                 stats.activePilots(),
                 stats.bidCount(),
-                stats.bidAmountTotal());
+                stats.bidAmountTotal(),
+                stats.suspendedUsers(),
+                stats.usersByRole(),
+                stats.topMissionsByBids().stream()
+                        .map(top -> new PlatformStatsResponse.TopMissionResponse(top.name(), top.bids()))
+                        .toList());
     }
 }

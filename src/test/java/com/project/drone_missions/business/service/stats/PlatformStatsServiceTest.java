@@ -10,11 +10,14 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageRequest;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -34,6 +37,8 @@ class PlatformStatsServiceTest {
     void setUp() {
         service = new PlatformStatsService(missionDao, userRepository, bidRepository);
         when(bidRepository.volume()).thenReturn(volume(0L, BigDecimal.ZERO));
+        when(bidRepository.topMissionsByBids(any())).thenReturn(List.of());
+        when(userRepository.countByRole()).thenReturn(List.of());
     }
 
     private static BidRepository.BidVolume volume(long count, BigDecimal total) {
@@ -45,6 +50,34 @@ class PlatformStatsServiceTest {
 
             @Override
             public BigDecimal getTotalAmount() {
+                return total;
+            }
+        };
+    }
+
+    private static UserRepository.RoleCount roleCount(UserRole role, long total) {
+        return new UserRepository.RoleCount() {
+            @Override
+            public UserRole getRole() {
+                return role;
+            }
+
+            @Override
+            public Long getTotal() {
+                return total;
+            }
+        };
+    }
+
+    private static BidRepository.MissionBidCount missionBids(String name, long total) {
+        return new BidRepository.MissionBidCount() {
+            @Override
+            public String getName() {
+                return name;
+            }
+
+            @Override
+            public Long getTotal() {
                 return total;
             }
         };
@@ -69,9 +102,13 @@ class PlatformStatsServiceTest {
         PlatformStats stats = service.overview();
 
         assertThat(stats.missionsByStatus().values()).containsOnly(0L);
+        assertThat(stats.usersByRole()).containsOnlyKeys(UserRole.values());
+        assertThat(stats.usersByRole().values()).containsOnly(0L);
         assertThat(stats.activePilots()).isZero();
+        assertThat(stats.suspendedUsers()).isZero();
         assertThat(stats.bidCount()).isZero();
         assertThat(stats.bidAmountTotal()).isEqualByComparingTo(BigDecimal.ZERO);
+        assertThat(stats.topMissionsByBids()).isEmpty();
     }
 
     @Test
@@ -92,5 +129,34 @@ class PlatformStatsServiceTest {
 
         assertThat(stats.bidCount()).isEqualTo(57L);
         assertThat(stats.bidAmountTotal()).isEqualByComparingTo("12345.50");
+    }
+
+    @Test
+    void sparseRoleCountsAreZeroFilledToAllRoles() {
+        when(missionDao.countByStatus()).thenReturn(Map.of());
+        when(userRepository.countByRole()).thenReturn(List.of(roleCount(UserRole.PILOT, 31L)));
+        when(userRepository.countBySuspendedAtIsNotNull()).thenReturn(3L);
+
+        PlatformStats stats = service.overview();
+
+        assertThat(stats.usersByRole())
+                .containsEntry(UserRole.PILOT, 31L)
+                .containsEntry(UserRole.DESIGNER, 0L)
+                .containsEntry(UserRole.ADMIN, 0L);
+        assertThat(stats.suspendedUsers()).isEqualTo(3L);
+    }
+
+    @Test
+    void topMissionsAreCappedAtSixAndKeepTheirOrder() {
+        when(missionDao.countByStatus()).thenReturn(Map.of());
+        when(bidRepository.topMissionsByBids(PageRequest.of(0, 6)))
+                .thenReturn(List.of(missionBids("Orchard survey", 9L), missionBids("Roof scan", 4L)));
+
+        List<PlatformStats.TopMission> top = service.overview().topMissionsByBids();
+
+        verify(bidRepository).topMissionsByBids(PageRequest.of(0, 6));
+        assertThat(top).containsExactly(
+                new PlatformStats.TopMission("Orchard survey", 9L),
+                new PlatformStats.TopMission("Roof scan", 4L));
     }
 }
