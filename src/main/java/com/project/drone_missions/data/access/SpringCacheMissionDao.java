@@ -11,6 +11,9 @@ import org.springframework.cache.caffeine.CaffeineCache;
 import org.springframework.scheduling.annotation.Scheduled;
 
 import java.time.Instant;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -144,10 +147,10 @@ public class SpringCacheMissionDao implements MissionDao {
         return delegate.findOverdue(statuses, endedBefore);
     }
 
-    /** Not cached, for the same reasons as {@link CachingMissionDao#findAll()}. */
+    /** Not cached, for the same reasons as {@link CachingMissionDao#searchAll}. */
     @Override
-    public List<Mission> findAll() {
-        return delegate.findAll();
+    public Page<Mission> searchAll(String pattern, Pageable pageable) {
+        return delegate.searchAll(pattern, pageable);
     }
 
     /** Not cached, for the same reasons as {@link CachingMissionDao#countByStatus()}. */

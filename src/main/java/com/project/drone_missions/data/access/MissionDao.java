@@ -2,6 +2,8 @@ package com.project.drone_missions.data.access;
 
 import com.project.drone_missions.data.model.Mission;
 import com.project.drone_missions.data.model.MissionStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.time.Instant;
 import java.util.Collection;
@@ -60,8 +62,11 @@ public interface MissionDao { // MissionDAO, @Cacheable Springova anotacija, par
     /** Awarded missions whose flight window has ended — the overdue scheduler's candidates. */
     List<Mission> findOverdue(Collection<MissionStatus> statuses, Instant endedBefore);
 
-    /** Every mission, any status or owner, newest first. Admin flows only — never cached. */
-    List<Mission> findAll();
+    /**
+     * Every mission, any status or owner, paged — optionally narrowed by a ready
+     * lowercase %…% LIKE pattern over name/designer. Admin flows only — never cached.
+     */
+    Page<Mission> searchAll(String pattern, Pageable pageable);
 
     /**
      * Mission counts grouped by status — sparse: statuses with no rows are absent, not zero.

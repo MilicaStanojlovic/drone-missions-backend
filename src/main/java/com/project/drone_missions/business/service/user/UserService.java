@@ -9,9 +9,10 @@ import com.project.drone_missions.data.model.User;
 import com.project.drone_missions.data.model.UserRole;
 import com.project.drone_missions.data.repository.UserRepository;
 import lombok.AllArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
 import java.util.Optional;
 
 /**
@@ -30,8 +31,9 @@ public class UserService {
         return repository.findByEmail(email);
     }
 
-    public List<User> findAll() {
-        return repository.findAll();
+    /** The admin listing; a null role means "everyone". */
+    public Page<User> search(UserRole role, Pageable pageable) {
+        return repository.search(role, pageable);
     }
 
     /**
