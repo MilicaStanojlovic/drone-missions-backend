@@ -2,6 +2,7 @@ package com.project.drone_missions.business.service.audit;
 
 import com.project.drone_missions.data.model.AuditAction;
 import com.project.drone_missions.data.model.AuditLog;
+import com.project.drone_missions.data.model.UserRole;
 import com.project.drone_missions.data.repository.AuditLogRepository;
 import com.project.drone_missions.data.repository.UserRepository;
 import lombok.AllArgsConstructor;
@@ -32,8 +33,10 @@ public class AuditService {
         return repository.save(log);
     }
 
-    /** The admin listing; null filters mean "everything". */
-    public Page<AuditLog> search(Long actorId, AuditAction action, Pageable pageable) {
-        return repository.search(actorId, action, pageable);
+    /** The admin listing; null/blank filters mean "everything". */
+    public Page<AuditLog> search(Long actorId, AuditAction action, UserRole role,
+                                 String q, Pageable pageable) {
+        String query = q == null || q.isBlank() ? null : q.trim();
+        return repository.search(actorId, action, role, query, pageable);
     }
 }

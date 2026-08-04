@@ -51,9 +51,9 @@ class AuditLogControllerTest {
     void listMapsRowsIntoThePagedEnvelope() {
         Pageable pageable = PageRequest.of(0, 20);
         Page<AuditLog> page = new PageImpl<>(List.of(row()), pageable, 1);
-        when(service.search(null, null, pageable)).thenReturn(page);
+        when(service.search(null, null, null, null, pageable)).thenReturn(page);
 
-        PagedModel<AuditLogResponse> body = controller.list(null, null, pageable).getBody();
+        PagedModel<AuditLogResponse> body = controller.list(null, null, null, null, pageable).getBody();
 
         assertThat(body.getContent()).hasSize(1);
         AuditLogResponse response = body.getContent().getFirst();
@@ -67,11 +67,11 @@ class AuditLogControllerTest {
     @Test
     void filtersAndPageablePassThroughToTheService() {
         Pageable pageable = PageRequest.of(2, 5);
-        when(service.search(9L, AuditAction.USER_SUSPENDED, pageable))
+        when(service.search(9L, AuditAction.USER_SUSPENDED, UserRole.PILOT, "orchard", pageable))
                 .thenReturn(new PageImpl<>(List.of(), pageable, 0));
 
-        controller.list(9L, AuditAction.USER_SUSPENDED, pageable);
+        controller.list(9L, AuditAction.USER_SUSPENDED, UserRole.PILOT, "orchard", pageable);
 
-        verify(service).search(9L, AuditAction.USER_SUSPENDED, pageable);
+        verify(service).search(9L, AuditAction.USER_SUSPENDED, UserRole.PILOT, "orchard", pageable);
     }
 }

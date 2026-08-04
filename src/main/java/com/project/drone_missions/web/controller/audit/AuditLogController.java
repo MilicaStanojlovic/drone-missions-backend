@@ -2,6 +2,7 @@ package com.project.drone_missions.web.controller.audit;
 
 import com.project.drone_missions.business.service.audit.AuditService;
 import com.project.drone_missions.data.model.AuditAction;
+import com.project.drone_missions.data.model.UserRole;
 import com.project.drone_missions.web.dto.audit.AuditLogResponse;
 import com.project.drone_missions.web.mapper.audit.AuditLogMapper;
 import lombok.AllArgsConstructor;
@@ -31,9 +32,11 @@ public class AuditLogController {
     public ResponseEntity<PagedModel<AuditLogResponse>> list(
             @RequestParam(required = false) Long actorId,
             @RequestParam(required = false) AuditAction action,
+            @RequestParam(required = false) UserRole role,
+            @RequestParam(required = false) String q,
             @ParameterObject @PageableDefault(size = 20, sort = "createdAt",
                     direction = Sort.Direction.DESC) Pageable pageable) {
         return ResponseEntity.ok(new PagedModel<>(
-                service.search(actorId, action, pageable).map(mapper::toResponse)));
+                service.search(actorId, action, role, q, pageable).map(mapper::toResponse)));
     }
 }
