@@ -50,10 +50,10 @@ public class PlatformStatsService {
         BidRepository.BidVolume bids = bidRepository.volume();
         return new PlatformStats(
                 byStatus,
-                userRepository.countByRoleAndSuspendedAtIsNull(UserRole.PILOT),
+                userRepository.countByRoleAndSuspendedFalse(UserRole.PILOT),
                 bids.getCount(),
                 bids.getTotalAmount(),
-                userRepository.countBySuspendedAtIsNotNull(),
+                userRepository.countBySuspendedTrue(),
                 byRole,
                 topMissions);
     }

@@ -1,6 +1,8 @@
 package com.project.drone_missions.business.service.mission;
 
+import com.project.drone_missions.business.exception.mission.MissionAccessDeniedException;
 import com.project.drone_missions.business.exception.mission.MissionConflictException;
+import com.project.drone_missions.business.exception.mission.MissionNotFoundException;
 import com.project.drone_missions.business.exception.user.UserSuspendedException;
 import com.project.drone_missions.business.service.audit.AuditService;
 import com.project.drone_missions.business.service.audit.NewAuditEntry;
@@ -58,7 +60,7 @@ class MissionServiceModerationTest {
     private static User user(Long id, boolean suspended) {
         User u = new User();
         u.setId(id);
-        u.setSuspendedAt(suspended ? Instant.now() : null);
+        u.setSuspended(suspended);
         return u;
     }
 
@@ -125,33 +127,52 @@ class MissionServiceModerationTest {
     }
 
     @Test
-    void removeWorksFromHiddenToo() {
+    void removeDeletesTheMissionAndRecordsTheAdmin() {
         Mission mission = mission(MissionStatus.PUBLISHED, MissionModeration.HIDDEN);
         when(missionDao.findFresh(1L)).thenReturn(Optional.of(mission));
-        when(missionDao.save(mission)).thenReturn(mission);
 
-        assertThat(service.remove(1L, 9L).getModeration()).isEqualTo(MissionModeration.REMOVED);
+        service.remove(1L, 9L);
 
+        verify(missionDao).delete(mission);
         ArgumentCaptor<NewAuditEntry> captor = ArgumentCaptor.forClass(NewAuditEntry.class);
         verify(auditService).record(captor.capture());
         assertThat(captor.getValue().action()).isEqualTo(AuditAction.MISSION_REMOVED);
+        assertThat(captor.getValue().actorId()).isEqualTo(9L);
+        assertThat(captor.getValue().targetId()).isEqualTo(1L);
     }
 
     @Test
-    void removeRejectsAlreadyRemoved() {
-        when(missionDao.findFresh(1L))
-                .thenReturn(Optional.of(mission(MissionStatus.PUBLISHED, MissionModeration.REMOVED)));
+    void removingAMissingMissionIsANotFound() {
+        when(missionDao.findFresh(1L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.remove(1L, 9L)).isInstanceOf(MissionConflictException.class);
+        assertThatThrownBy(() -> service.remove(1L, 9L)).isInstanceOf(MissionNotFoundException.class);
+        verify(missionDao, never()).delete(any());
         verify(auditService, never()).record(any());
     }
 
     @Test
-    void restoreOnlyFromRemoved() {
-        when(missionDao.findFresh(1L))
-                .thenReturn(Optional.of(mission(MissionStatus.PUBLISHED, MissionModeration.VISIBLE)));
+    void ownerDeleteRemovesAndRecordsTheDesigner() {
+        Mission mission = mission(MissionStatus.DRAFT, MissionModeration.VISIBLE);
+        mission.setDesigner(user(7L, false));
+        when(missionDao.findFresh(1L)).thenReturn(Optional.of(mission));
 
-        assertThatThrownBy(() -> service.restore(1L, 9L)).isInstanceOf(MissionConflictException.class);
+        service.delete(1L, 7L);
+
+        verify(missionDao).delete(mission);
+        ArgumentCaptor<NewAuditEntry> captor = ArgumentCaptor.forClass(NewAuditEntry.class);
+        verify(auditService).record(captor.capture());
+        assertThat(captor.getValue().action()).isEqualTo(AuditAction.MISSION_DELETED);
+    }
+
+    @Test
+    void ownerDeleteByAnyoneElseIsDenied() {
+        Mission mission = mission(MissionStatus.DRAFT, MissionModeration.VISIBLE);
+        mission.setDesigner(user(7L, false));
+        when(missionDao.findFresh(1L)).thenReturn(Optional.of(mission));
+
+        assertThatThrownBy(() -> service.delete(1L, 5L))
+                .isInstanceOf(MissionAccessDeniedException.class);
+        verify(missionDao, never()).delete(any());
         verify(auditService, never()).record(any());
     }
 }
