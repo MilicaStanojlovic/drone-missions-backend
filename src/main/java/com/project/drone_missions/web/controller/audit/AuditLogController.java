@@ -29,7 +29,7 @@ public class AuditLogController {
     /** PagedModel, not Page: the stable JSON page envelope since Spring Data Commons 3.3. */
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<PagedModel<AuditLogResponse>> list(
+    public ResponseEntity<PagedModel<AuditLogResponse>> list( // parametre TODO
             @RequestParam(required = false) Long actorId,
             @RequestParam(required = false) AuditAction action,
             @RequestParam(required = false) UserRole role,
