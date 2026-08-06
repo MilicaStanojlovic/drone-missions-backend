@@ -46,7 +46,7 @@ public class EmailService {
         this.frontendUrl = frontendUrl;
         this.redirectTo = redirectTo;
     }
-// TODO COMMENTS
+
     /** Tell a mission's owner that a pilot has placed a bid on it. */
     @Async
     public void sendNewBid(NewBidEmail email) {

@@ -1,0 +1,13 @@
+#!/bin/sh
+# Pre-commit: run Checkstyle when the commit touches Java files.
+# Setup (once per clone): git config core.hooksPath .githooks
+
+if git diff --cached --name-only --diff-filter=ACMR | grep -q '\.java$'; then
+    echo "pre-commit: Java changes staged -- running Checkstyle..."
+    if ! ./mvnw -B checkstyle:check; then
+        echo "" >&2
+        echo "pre-commit: Checkstyle violations found; commit aborted." >&2
+        echo "pre-commit: fix the violations above, or see target/checkstyle-result.xml." >&2
+        exit 1
+    fi
+fi

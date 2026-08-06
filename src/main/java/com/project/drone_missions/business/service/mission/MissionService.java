@@ -12,7 +12,6 @@ import com.project.drone_missions.business.service.notification.NewNotification;
 import com.project.drone_missions.business.service.notification.NotificationService;
 import com.project.drone_missions.data.access.MissionDao;
 import com.project.drone_missions.data.access.OpenMissionQuery;
-import com.project.drone_missions.data.model.Bid;
 import com.project.drone_missions.data.model.BidStatus;
 import com.project.drone_missions.data.model.Mission;
 import com.project.drone_missions.data.model.MissionModeration;

@@ -17,7 +17,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Set;
 
@@ -53,7 +52,8 @@ class MissionServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new MissionService(repository, bidRepository, userRepository, notificationService, emailService, auditService);
+        service = new MissionService(repository, bidRepository, userRepository, notificationService, emailService,
+                auditService);
         // Lenient: the admin-search test never touches the feed.
         lenient().when(repository.findOpen(any())).thenReturn(List.of());
     }

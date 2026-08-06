@@ -48,7 +48,7 @@ public class UserService {
      * Feed lists are invalidated because a suspended designer's missions leave
      * the marketplace without any mission row being written.
      */
-    public User suspend(Long id, Long adminId) { // TODO project root xml check style, pre commit hooks.. identacija npr, parametri komentari
+    public User suspend(Long id, Long adminId) {
         User user = findById(id);
         if (user.getRole() == UserRole.ADMIN) {
             throw new AdminCannotBeSuspendedException(id);

@@ -9,8 +9,9 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
 /**
- * Bridges Spring Security to our user store. The {@link org.springframework.security.authentication.AuthenticationManager}
- * calls this during login to load the account (by email) whose password it then verifies.
+ * Bridges Spring Security to our user store. The
+ * {@link org.springframework.security.authentication.AuthenticationManager} calls this during
+ * login to load the account (by email) whose password it then verifies.
  */
 @Service
 @AllArgsConstructor

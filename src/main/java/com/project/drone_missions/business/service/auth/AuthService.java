@@ -52,7 +52,7 @@ public class AuthService {
      * @throws AdminRegistrationNotAllowedException if the requested role is ADMIN
      */
     public User createUser(String username, String email, String rawPassword, UserRole role) {
-        if (role == UserRole.ADMIN) {  // typescript linters, plugins, subagents TODO
+        if (role == UserRole.ADMIN) {
             throw new AdminRegistrationNotAllowedException();
         }
         if (userRepository.existsByEmail(email)) {

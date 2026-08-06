@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface BidRepository extends JpaRepository<Bid, Long> {
+public interface BidRepository extends JpaRepository<Bid, Long> { // TODO nov interfejs
 
     Optional<Bid> findByMission_IdAndPilot_Id(Long missionId, Long pilotId);
 
