@@ -46,7 +46,7 @@ public final class TtlCache<K, V> {
 
     private final ConcurrentHashMap<K, Entry<V>> entries = new ConcurrentHashMap<>();
     private final Clock clock;
-    private final long ttlMillis; // Schedular
+    private final long ttlMillis;
     private final int maxSize;
 
     private final LongAdder hits = new LongAdder();

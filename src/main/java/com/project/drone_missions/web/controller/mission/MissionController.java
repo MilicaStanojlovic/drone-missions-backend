@@ -47,7 +47,8 @@ public class MissionController {
     private List<MissionResponse> toResponses(List<Mission> missions) {
         Map<Long, RatingSummary> ratings = ratingService.summariesFor( // TODO refactor
                 missions.stream()
-                        .map(Mission::getDesignerId).toList());
+                        .map(Mission::getDesignerId)
+                        .toList());
         return missions.stream()
                 .map(m -> mapper.toResponse(m, ratingOf(ratings, m.getDesignerId())))
                 .toList();
