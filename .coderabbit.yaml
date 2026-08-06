@@ -5,4 +5,3 @@ reviews:
     enabled: true
     base_branches:
       - "develop"
-      - "release/.*"   # regex je dozvoljen, ".*" hvata sve grane
