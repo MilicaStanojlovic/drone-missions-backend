@@ -164,6 +164,35 @@
 					</execution>
 				</executions>
 			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-checkstyle-plugin</artifactId>
+				<version>3.6.0</version>
+				<dependencies>
+					<!-- The plugin bundles Checkstyle 9.3; override with a current core. -->
+					<dependency>
+						<groupId>com.puppycrawl.tools</groupId>
+						<artifactId>checkstyle</artifactId>
+						<version>13.9.0</version>
+					</dependency>
+				</dependencies>
+				<configuration>
+					<configLocation>checkstyle.xml</configLocation>
+					<consoleOutput>true</consoleOutput>
+					<includeTestSourceDirectory>true</includeTestSourceDirectory>
+					<failOnViolation>true</failOnViolation>
+				</configuration>
+				<executions>
+					<execution>
+						<id>checkstyle-check</id>
+						<!-- validate, not the default verify: style fails the build before compilation -->
+						<phase>validate</phase>
+						<goals>
+							<goal>check</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
 		</plugins>
 	</build>
 

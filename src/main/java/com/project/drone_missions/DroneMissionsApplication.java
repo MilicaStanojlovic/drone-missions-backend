@@ -10,8 +10,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableAsync
 public class DroneMissionsApplication {
 
-	public static void main(String[] args) {
-		SpringApplication.run(DroneMissionsApplication.class, args);
-	}
+    public static void main(String[] args) {
+        SpringApplication.run(DroneMissionsApplication.class, args);
+    }
 
 }

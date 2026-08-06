@@ -25,7 +25,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
-import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -58,7 +57,8 @@ class BidServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new BidService(bidRepository, missionDao, userRepository, notificationService, emailService, auditService);
+        service = new BidService(bidRepository, missionDao, userRepository, notificationService, emailService,
+                auditService);
     }
 
     private static User user(Long id, boolean suspended) {
