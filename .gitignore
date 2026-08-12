@@ -37,3 +37,4 @@ build/
 
 ### multiagent-dev pipeline scratch state ###
 .claude/tasks/
+plans/
