@@ -1,11 +1,12 @@
 package com.project.drone_missions.data.access;
 
 import com.project.drone_missions.config.MissionCacheProperties;
-import com.project.drone_missions.data.model.GeoPoint;
 import com.project.drone_missions.data.model.Mission;
 import com.project.drone_missions.data.model.MissionModeration;
 import com.project.drone_missions.data.model.MissionStatus;
 import com.project.drone_missions.data.model.User;
+import com.project.drone_missions.data.model.Waypoint;
+import com.project.drone_missions.data.model.WaypointAction;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -80,7 +81,7 @@ class CachingMissionDaoTest {
                 user(7L), null,
                 Instant.parse("2026-02-01T10:00:00Z"), Instant.parse("2026-02-01T12:00:00Z"),
                 "Novi Sad", null,
-                new ArrayList<>(List.of(new GeoPoint(45.0, 19.0))), null,
+                new ArrayList<>(List.of(new Waypoint(45.0, 19.0, 50.0, WaypointAction.PHOTO, null))), null,
                 Instant.parse("2026-01-01T00:00:00Z"), Instant.parse("2026-01-01T00:00:00Z"));
     }
 
@@ -144,7 +145,7 @@ class CachingMissionDaoTest {
 
         Mission cached = cache.findById(1L).orElseThrow();
 
-        assertThatThrownBy(() -> cached.getWaypoints().add(new GeoPoint(1, 1)))
+        assertThatThrownBy(() -> cached.getWaypoints().add(new Waypoint(1, 1, 50.0, WaypointAction.PHOTO, null)))
                 .isInstanceOf(UnsupportedOperationException.class);
     }
 
