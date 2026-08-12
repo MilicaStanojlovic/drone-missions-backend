@@ -1,8 +1,8 @@
 package com.project.drone_missions.web.dto.mission;
 
-import com.project.drone_missions.data.model.GeoPoint;
 import com.project.drone_missions.data.model.Geofence;
 import com.project.drone_missions.data.model.MissionStatus;
+import com.project.drone_missions.data.model.Waypoint;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -24,7 +24,7 @@ public record MissionRequest(
         // a flight path needs a start and an end — reject a missing path or a single dangling point
         @NotNull(message = "a flight path needs at least 2 waypoints")
         @Size(min = 2, message = "a flight path needs at least 2 waypoints")
-        @Valid List<GeoPoint> waypoints,
+        @Valid List<Waypoint> waypoints,
         @Valid Geofence geofence
 ) {
 }

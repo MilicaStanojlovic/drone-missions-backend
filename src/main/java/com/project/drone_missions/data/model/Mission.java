@@ -73,7 +73,7 @@ public class Mission {
     /** Ordered route, stored as a JSON array of lat/lng points. */
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
-    private List<GeoPoint> waypoints;
+    private List<Waypoint> waypoints;
 
     /** Flight zone (circle or polygon), stored as a JSON object. */
     @JdbcTypeCode(SqlTypes.JSON)
