@@ -34,3 +34,7 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### multiagent-dev pipeline scratch state ###
+.claude/tasks/
+plans/

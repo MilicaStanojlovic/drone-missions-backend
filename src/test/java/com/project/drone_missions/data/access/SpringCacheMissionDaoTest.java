@@ -1,11 +1,12 @@
 package com.project.drone_missions.data.access;
 
 import com.project.drone_missions.config.SpringCacheConfig;
-import com.project.drone_missions.data.model.GeoPoint;
 import com.project.drone_missions.data.model.Mission;
 import com.project.drone_missions.data.model.MissionModeration;
 import com.project.drone_missions.data.model.MissionStatus;
 import com.project.drone_missions.data.model.User;
+import com.project.drone_missions.data.model.Waypoint;
+import com.project.drone_missions.data.model.WaypointAction;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -98,7 +99,7 @@ class SpringCacheMissionDaoTest {
                 user(7L), null,
                 Instant.parse("2026-02-01T10:00:00Z"), Instant.parse("2026-02-01T12:00:00Z"),
                 "Novi Sad", null,
-                new ArrayList<>(List.of(new GeoPoint(45.0, 19.0))), null,
+                new ArrayList<>(List.of(new Waypoint(45.0, 19.0, 50.0, WaypointAction.PHOTO, null))), null,
                 Instant.parse("2026-01-01T00:00:00Z"), Instant.parse("2026-01-01T00:00:00Z"));
     }
 

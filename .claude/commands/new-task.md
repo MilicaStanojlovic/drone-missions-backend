@@ -49,15 +49,28 @@ Start work on a ClickUp task.
    description is empty or too thin to work from, say so and get the
    requirements from me instead of guessing.
 
-10. Enter plan mode and plan the implementation against this repo's
-    conventions (CLAUDE.md: Spring-first, layered packages, Flyway
-    migration + entity in sync, DTO/mapper separation). Keep the plan
-    incremental — smallest shippable slice first. Wait for my
-    approval; do not touch code before it.
+10. Once the requirements are clear (task description plus my answers
+    from step 9), hand off to the multiagent-dev pipeline instead of
+    planning it yourself: call
+    Workflow({ name: 'multiagent-dev', args: { feature: 'SLUG',
+    brief: '<task description + clarifications, written out as one
+    self-contained brief>' } }), where SLUG is exactly the branch slug
+    from step 5. If the task's work lives in another repo (e.g. a
+    [Frontend] task), also pass repo: '<absolute path to that repo>'
+    so the plan file lands in that repo's plans/ folder.
+    That workflow plans the task into plans/PLAN-SLUG.md in the repo
+    the work happens in (gitignored; the checked-off file remains as
+    the feature's record),
+    implements it one task at a time, reviews the diff against
+    CLAUDE.md, and runs Checkstyle plus targeted tests — all before
+    you see it.
 
-11. After I approve, implement the plan, keeping me posted per slice.
-    When the work is done and committed, remind me that /pr will open
-    the pull request and the hook will move this task to review.
+11. When the workflow finishes, summarize what it returned: the task
+    list it planned in plans/PLAN-SLUG.md, the reviewer's findings,
+    and the tester's pass/fail verdict. Point out anything the reviewer or tester flagged so I can
+    decide whether it needs another pass before committing. Once I'm
+    happy with the result and it's committed, remind me that /pr will
+    open the pull request and the hook will move this task to review.
 
 Never create the ClickUp task, never change anything other than the
 status, and never push the new branch.

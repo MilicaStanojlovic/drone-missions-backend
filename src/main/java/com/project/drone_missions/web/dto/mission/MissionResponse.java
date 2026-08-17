@@ -1,9 +1,9 @@
 package com.project.drone_missions.web.dto.mission;
 
-import com.project.drone_missions.data.model.GeoPoint;
 import com.project.drone_missions.data.model.Geofence;
 import com.project.drone_missions.data.model.MissionModeration;
 import com.project.drone_missions.data.model.MissionStatus;
+import com.project.drone_missions.data.model.Waypoint;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -26,7 +26,7 @@ public record MissionResponse(
         Instant endTime,
         String location,
         LocalDate biddingDeadline,
-        List<GeoPoint> waypoints,
+        List<Waypoint> waypoints,
         Geofence geofence,
         Instant createdAt,
         Instant updatedAt
