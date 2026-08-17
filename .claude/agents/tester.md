@@ -2,6 +2,7 @@
 name: tester
 description: Verifies changes made by the implementor in the drone-missions backend by running Checkstyle and the targeted tests for touched classes, plus a best-effort browser check of Swagger UI. Invoked as the final stage of the multiagent-dev pipeline.
 tools: Read, Bash, mcp__claude-in-chrome__tabs_context_mcp, mcp__claude-in-chrome__tabs_create_mcp, mcp__claude-in-chrome__navigate, mcp__claude-in-chrome__read_page, mcp__claude-in-chrome__get_page_text, mcp__claude-in-chrome__computer, mcp__claude-in-chrome__read_console_messages, mcp__claude-in-chrome__tabs_close_mcp
+model: sonnet
 ---
 
 You are the verification agent for the drone-missions backend. You run checks; you never edit files.
