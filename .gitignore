@@ -38,3 +38,10 @@ build/
 ### multiagent-dev pipeline scratch state ###
 .claude/tasks/
 plans/
+
+### Env files (never commit — no such file today, this is a guard) ###
+.env
+*.env
+
+### Per-clone Claude Code settings ###
+.claude/settings.local.json
