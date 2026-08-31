@@ -19,7 +19,7 @@ mvnw.cmd checkstyle:check
 ```
 
 - Swagger UI: <http://localhost:8085/swagger-ui.html> (use **Authorize** with the token from login)
-- No admin is seeded. Create the first one with a manual INSERT into the users table (role ADMIN, your own BCrypt hash); after that, admins create admins through POST /api/v1/users/admins.
+- **No admin is seeded.** Registration rejects `ADMIN` and `POST /api/v1/users/admins` requires one, so create the first admin by hand — insert a row into `users` with `role = 'ADMIN'` and your own BCrypt hash. From there, admins create other admins through the API.
 
 ## Roles
 
